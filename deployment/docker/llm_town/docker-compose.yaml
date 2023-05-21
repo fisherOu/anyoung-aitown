@@ -1,0 +1,21 @@
+version: '2.0'
+
+services:
+  node:
+    image: ghcr.io/foundry-rs/foundry:latest
+    command:
+      - anvil --block-time=1 --block-base-fee-per-gas 0 --host=0.0.0.0
+    ports:
+      - "8545:8545"
+    volumes:
+      - anvil-data:/var/anvil/data
+    restart: always
+
+  client:
+    image: jpccr.ccs.tencentyun.com/llm-town/client:0.1.9
+    ports:
+      - "3000:80"
+    restart: always
+
+volumes:
+  anvil-data:

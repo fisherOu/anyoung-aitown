@@ -1,0 +1,145 @@
+[
+    {
+        "name": "Bed",
+        "description": "You can sleep with a Bed.",
+        "operations": [
+            {
+                "name": "sleep",
+                "distance": 1,
+                "owner": false,
+                "duration": 100
+            }
+        ]
+    },
+    {
+        "name": "TV",
+        "description": "You can watch tv with a television.",
+        "operations": [
+            {
+                "name": "watch",
+                "distance": 3,
+                "owner": false
+            }
+        ]
+    },
+    {
+        "name": "Bookshelf",
+        "description": "You can read books with a Bookshelf.",
+        "operations": [
+            {
+                "name": "read books",
+                "distance": 1,
+                "owner": false
+            }
+        ]
+    },
+    {
+        "name": "Fridge",
+        "description": "You can access to food with a Fridge.",
+        "operations": [
+            {
+                "name": "access to food",
+                "distance": 1,
+                "owner": false
+            }
+        ]
+    },
+    {
+        "name": "Sink",
+        "description": "You can wash up with a Sink.",
+        "operations": [
+            {
+                "name": "wash up",
+                "distance": 1,
+                "owner": false
+            }
+        ]
+    },
+    {
+        "name": "Toilet",
+        "description": "You can use toilet with a Toilet.",
+        "operations": [
+            {
+                "name": "use toilet",
+                "distance": 1,
+                "owner": false
+            }
+        ]
+    },
+    {
+        "name": "Bathtub",
+        "description": "You can take a shower with a bathtub.",
+        "operations": [
+            {
+                "name": "take a shower",
+                "distance": 1,
+                "owner": false
+            }
+        ]
+    },
+    {
+        "name": "Table",
+        "description": "You can have meal with a Table.",
+        "operations": [
+            {
+                "name": "have meal",
+                "distance": 1,
+                "owner": false
+            }
+        ]
+    },
+    {
+        "name": "Range",
+        "description": "You can make a meal with a Range.",
+        "operations": [
+            {
+                "name": "make a meal",
+                "distance": 1,
+                "owner": false,
+                "asset": "cooking.gif"
+            }
+        ]
+    },
+    {
+        "name": "Cafe",
+        "description": "You can drink coffee with a Cafe.",
+        "operations": [
+            {
+                "name": "drink coffee",
+                "distance": 1,
+                "owner": false
+            }
+        ]
+    },
+    {
+        "name": "Park",
+        "description": "You can rest or exercise with a Park.",
+        "operations": [
+            {
+                "name": "rest",
+                "distance": 1,
+                "owner": false
+            },
+            {
+                "name": "exercise",
+                "distance": 1,
+                "owner": false
+            }
+        ]
+    },
+    {
+        "name": "Bar",
+        "description": "You can buy coffee with a Bar.",
+        "operations": [
+            {
+                "name": "buy coffee",
+                "distance": 1,
+                "owner": false
+            },{
+                "name": "sell coffee",
+                "distance": 1,
+                "owner": true
+            }
+        ]
+    }
+]

@@ -1,0 +1,29 @@
+[
+    {
+        "location_properties": {
+            "name": "Cafe",
+            "near": ["House", "Park"],
+            "enterance": [23,11],
+            "range": [21, 4, 30, 13],
+            "equipments": ["Bar", "Table"]
+        }
+    },
+    {
+        "location_properties": {
+            "name": "House",
+            "near": ["Cafe", "Park"],
+            "enterance": [10,13],
+            "range": [6, 1, 19, 15],
+            "equipments": ["TV", "Bed", "Bookshelf", "Fridge", "Range", "Table", "Sink", "Toilet", "Bathtub"]
+        }
+    },
+    {
+        "location_properties": {
+            "name": "Park",
+            "near": ["House", "Cafe"],
+            "enterance": [10,20],
+            "range": [4, 18, 19, 30],
+            "equipments": ["Park"]
+        }
+    }
+]

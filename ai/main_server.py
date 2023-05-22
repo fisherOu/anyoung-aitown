@@ -26,6 +26,8 @@ class App:
         self.config = Config(os.path.join(self.abs_path, 'config', 'app.json'))
         self.mud = MUDConnector(self.config.admin_private_key, self.config)
         self.map = self.mud.get_map()
+        self.get_saved_time_tick()
+        self.start_time = 1682870400  # self.get_nowtime_seconds()
         # self._init_equipments()
         self.width = len(self.map)
         self.height = len(self.map[0])
@@ -33,7 +35,7 @@ class App:
         self.equipments = dict()
         self.coord2equipment = dict()
         self.equipment2coords = dict()
-        self.clear_log()
+        # self.clear_log()
         self.entities = dict()
         self.position = dict()
         self.flush_events()
@@ -67,6 +69,19 @@ class App:
         return res
         # agent = self.agents[name]
         # return agent.react("", self.get_nowtime_seconds())
+    
+    def get_saved_time_tick(self):
+        self.time_tick = 0
+        path = os.path.join(self.abs_path, 'time_tick.txt')
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as agent_file:
+                self.time_tick = int(agent_file.read())
+
+    def save_time_tick(self):
+        path = os.path.join(self.abs_path, 'time_tick.txt')
+        with open(path, 'w', encoding='utf-8') as agent_file:
+            # json_obj = json.loads(agent_file)
+            agent_file.write(str(self.time_tick))
     
     def clear_log(self):
         log_file = open(os.path.join(self.abs_path, 'server.log'), 'w', encoding='utf-8')
@@ -115,6 +130,9 @@ class App:
             config = EquipmentConfig(obj)
             self.equipment_config[config.id] = config
             # self.names.append(config.id)
+    
+    def get_time_tick(self):
+        return self.start_time + self.time_tick * self.config.seconds_per_tick
 
     def get_equipment_config(self, id):
         return self.equipment_config[id]
@@ -167,26 +185,26 @@ class App:
     def get_nowtime_seconds(self):
         return int(time.time())
     
-    def in_bounds(self, row, col):
-        return 0 <= row < self.height and 0 <= col < self.width
+    def in_bounds(self, x, y):
+        return 0 <= x < self.width and 0 <= y < self.height
     
-    def passable(self, row, col):
-        return self.get_terrain_config(self.map[row][col]).passable
+    def passable(self, x, y):
+        return self.get_terrain_config(self.map[x][y]).passable
     
-    def neighbors(self, row, col):
+    def neighbors(self, x, y):
         results = []
         # 上
-        if self.in_bounds(row - 1, col) and self.passable(row - 1, col):
-            results.append((row - 1, col))
+        if self.in_bounds(x - 1, y) and self.passable(x - 1, y):
+            results.append((x - 1, y))
         # 下
-        if self.in_bounds(row + 1, col) and self.passable(row + 1, col):
-            results.append((row + 1, col))
+        if self.in_bounds(x + 1, y) and self.passable(x + 1, y):
+            results.append((x + 1, y))
         # 左
-        if self.in_bounds(row, col - 1) and self.passable(row, col - 1):
-            results.append((row, col - 1))
+        if self.in_bounds(x, y - 1) and self.passable(x, y - 1):
+            results.append((x, y - 1))
         # 右  
-        if self.in_bounds(row, col + 1) and self.passable(row, col + 1):
-            results.append((row, col + 1))
+        if self.in_bounds(x, y + 1) and self.passable(x, y + 1):
+            results.append((x, y + 1))
         return results
 
     def init_agent(self):
@@ -210,12 +228,13 @@ class App:
                 if event["component_name"] == "Position" and "Position" in self.entities[event["entity"]]:
                     position = self.entities[event["entity"]]["Position"]
                     x, y = position[0]
-                    print(x, y)
+                    # print(x, y)
                     if x in self.position and y in self.position[x]:
                         del self.position[x][y]
                 self.entities[event["entity"]][event["component_name"]] = event["data"]
             else:
-                del self.entities[event["entity"]][event["component_name"]]
+                if event["entity"] in self.entities and event["component_name"] in self.entities[event["entity"]]:
+                    del self.entities[event["entity"]][event["component_name"]]
         self.parse_events()
 
 # Create the flask object.

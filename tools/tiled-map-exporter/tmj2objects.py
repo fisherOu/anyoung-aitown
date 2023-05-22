@@ -1,12 +1,19 @@
 import json
 import argparse
 
+def is_interactive(obj):
+    if 'properties' in obj:
+        for prop in obj['properties']:
+            if (prop['name'] == "Interactive" or prop['name'] == "interactive") and prop['type'] == "bool" and prop['value'] is True:
+                return True
+    return False
+
 def extract_interactive_objects(tmj_data):
     interactive_objects = []
     for layer in tmj_data['layers']:
         if layer['type'] == 'objectgroup':
             for obj in layer['objects']:
-                if 'type' in obj and obj["type"] == "Object":
+                if ('type' in obj and (obj["type"] == "Object" or obj["type"] == "object")) or is_interactive(obj):
                     interactive_objects.append(obj)
                         
 

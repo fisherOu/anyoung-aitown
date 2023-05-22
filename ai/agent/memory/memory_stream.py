@@ -1,5 +1,5 @@
-from agent.memory.memory import Memory, BACKGROUND, PLAN
-from typing import List, Dict
+from agent.memory.memory import Memory, BACKGROUND, PLAN, empty_memory, empty_plan
+from typing import List, Dict, Any
 
 from utils.tools import get_idle_id
 
@@ -55,3 +55,29 @@ class MemoryStream:
                 memories.append(memory)
                 memory.last_access = time_tick
         return memories
+
+    def export_memory(self) -> List[Dict[str, Any]]:
+        return [x.to_json() for x in self.stream]
+
+    def to_json_obj(self) -> Dict[str, Any]:
+        return {
+            "background": self.background.to_json() if self.background else None,
+            "plan": self.plan.to_json() if self.plan else None,
+            "stream": self.export_memory()
+        }
+
+    def from_json_obj(self, json_obj: Dict[str, Any]):
+        self.background = empty_memory()
+        self.background.from_json(json_obj.get("background"))
+        self.plan = empty_plan()
+        self.plan.from_json(json_obj.get("plan"))
+        for memory in json_obj.get("stream", list()):
+            obj = None
+            if not memory:
+                continue
+            if memory.get("memory_type" == PLAN):
+                obj = empty_plan()
+            else:
+                obj = empty_memory()
+            obj.from_json(memory)
+            self.stream.append(obj)

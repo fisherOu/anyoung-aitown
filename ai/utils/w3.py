@@ -65,6 +65,37 @@ class Web3Connector(object):
             # if nonce >= 3:
             #     break
             return
+    
+    def async_send(self, func):
+        """send web3 request
+
+        Args:
+            func (str): _description_. 'funcName(params)'
+
+        Returns:
+            _type_: _description_
+        """
+        while 1:
+            nonce = self.w3.eth.getTransactionCount(self.acct.address)
+            # print(action, nonce)
+            try:
+                # print(func)
+                construct_txn = eval('self.contract.functions.{}'.format(func)).buildTransaction({
+                    'from': self.acct.address,
+                    'nonce': nonce,
+                    'gas': 30000000,
+                    'gasPrice': self.w3.toWei('0', 'gwei'),
+                })
+                signed = self.acct.signTransaction(construct_txn)
+                tx_hash = self.w3.eth.sendRawTransaction(signed.rawTransaction)
+                # tx_receipt = self.w3.eth.waitForTransactionReceipt(tx_hash)
+                # print(tx_receipt)
+                # return {"hash": tx_hash.hex(), "result": tx_receipt}
+            except Exception as e:
+                print(func, "execute error:", str(e))
+                nonce += 1
+                if nonce >= 3:
+                    return
 
     def transfer(self, func, amount):
         """send web3 request
@@ -124,6 +155,7 @@ class MUDConnector(object):
         self.config = cfg
         self.private_key = private_key
         self.world = self._connect(cfg.world_address, "World.json")
+        self.singletonID = 1549
         self.wallet = self.world.acct.address
         self.player = eval(self.wallet)
         if loadComponents:
@@ -167,6 +199,13 @@ class MUDConnector(object):
         return self._connect(system_address, f"{system}System.json")
     
     def send(self, system: str, param: str):
+        """
+        send("Move", "(1,1)")
+        -> self.systems["Move"].send("executeTyped((1,1))")
+        """
+        self.systems[system].send(f"executeTyped({param})")
+    
+    def async_send(self, system: str, param: str):
         """
         send("Move", "(1,1)")
         -> self.systems["Move"].send("executeTyped((1,1))")
@@ -306,17 +345,58 @@ class MUDConnector(object):
 
 if __name__ == "__main__":
     cfg = Config(os.path.join(abs_path, "..", "config", "app.json"))
-    pk = "0x19c03c5470a3aa51075bbc069deda1c9c57be29fde0e3ae6e24c34ec687162a8"
+    pk = "0x9a450fb151537a6385a56cd5d24dac705ce7aa7bf59da854633ac0c1588a0fa1"
+    # print(new_account())
+    # print(new_account())
+    # print(new_account())
+    # print(new_account())
+    # print(new_account())
+    # print(new_account())
     # # pk = "0x22a049545bcf647578b9f31de26310413516f735c2c44800e8eb695517d628f3"
     # # pk = new_account()
     # # print(pk)
+    # v = eval("0x06D")
+    # from config import TerrainConfig
+    # from utils.tools import load_json_file
+    # terrain_config = dict()
+    # # Load json file.
+    # objs = load_json_file(os.path.join(abs_path, '..', 'config', 'terrain.json'))
+    # # Read data.
+    # for obj in objs:
+    #     config = TerrainConfig(obj)
+    #     terrain_config[config.id] = config
+    #     print(config.id, config.name, config.passable)
+
     mud = MUDConnector(pk, cfg)
-    # mud.send("Move", '(6,14)')
-    print(mud.get_events())
+    mud.send("Move", '(121,91)')
+    # position = mud.getValue("Position", f'"{mud.player}"')
+    # locations = list()
+    # with open(r"D:\WorkSpace\ShareWithUbuntu2204\llm-town\ai\config\location.json", "r", encoding="utf-8") as agent_file:
+    #     locations = json.loads(agent_file.read())
+    # agents = list()
+    # with open(r"D:\WorkSpace\ShareWithUbuntu2204\llm-town\ai\config\agent.json", "r", encoding="utf-8") as agent_file:
+    #     agents = json.loads(agent_file.read())
+    # for agent in agents:
+    #     pk = agent["private_key"]
+    #     ag = MUDConnector(pk, cfg)
+    #     ag.remove("Status", ag.player)
+    #     ag.remove("Agent", ag.player)
+    #     ag.remove("Position", ag.player)
+    
+    # print(mud.getValue("MapConfig", ""))  # , f"{mud.singletonID}"
+    # print(mud.getValue("Broadcast", ""))
+    # import time
+    # print(mud.getValue("Chat", f"{mud.player}"))
+    # start = time.time()
+    # mud.send("Move", '(17,17)')
+    # end = time.time()
+    # print(end-start)
+    # print(mud.get_events())
     # for equipment, item in mud.get_equipments().items():
-    #     if item["type"] == "Bed":
-    #         print(item["name"], item["type"], item["functions"])
-    #         print(item["coords"])
+    #     print(equipment, item)
+        # if item["type"] == "Bed":
+        #     print(item["name"], item["type"], item["functions"])
+        #     print(item["coords"])
     # sets = mud.world.searchEvent("ComponentValueSet", 0)
     # removes = mud.world.searchEvent("ComponentValueRemoved", 0)
     # actions = list()
@@ -365,15 +445,118 @@ if __name__ == "__main__":
     #     # print(s)
     #     # print(r)
     #     break
-    # actions = mud.get_events()
+    # entities = dict()
+    # positions = dict()
+    # events = mud.get_events()
+    # for event in events:
+    #     if event["entity"] not in entities:
+    #         entities[event["entity"]] = dict()
+    #     if event["action"] == "set":
+    #         if event["component_name"] == "Position" and "Position" in entities[event["entity"]]:
+    #             position = entities[event["entity"]]["Position"]
+    #             x, y = position[0]
+    #             # print(x, y)
+    #             if x in positions and y in positions[x]:
+    #                 del positions[x][y]
+    #         entities[event["entity"]][event["component_name"]] = event["data"]
+    #     else:
+    #         if event["entity"] in entities and event["component_name"] in entities[event["entity"]]:
+    #             del entities[event["entity"]][event["component_name"]]
+    # coord2equipment = dict()
+    # equipment2coords = dict()
+    # equipments = dict()
+    # for entity, info in entities.items():
+    #     if "ItemMetadata" in info:
+    #         n, t, f = info["ItemMetadata"]
+    #         tx, ty, bx, by = info["Boundary2D"]
+    #         for x in range(tx, bx+1):
+    #             for y in range(ty, by+1):
+    #                 coord = (x, y)
+    #                 if coord[0] not in coord2equipment:
+    #                     coord2equipment[coord[0]] = dict()
+    #                 coord2equipment[coord[0]][coord[1]] = entity
+    #                 if t not in equipment2coords:
+    #                     equipment2coords[t] = set()
+    #                 equipment2coords[t].add(coord)
+    #         equipments[entity] = {
+    #             "name": n,
+    #             "type": t,
+    #             "functions": f
+    #         }
+    #         # if t in equipment_config:
+    #         #     equipments[entity]['config'] = get_equipment_config(t)
+    #     if "Position" in info:
+    #         x, y = info["Position"][0]
+    #         if x not in positions:
+    #             positions[x] = dict()
+    #         positions[x][y] = entity
+    # print("entities:", entities)
+    # print("positions:", positions)
     # for action in actions:
-    #     print(action)
-        # if action["component_name"] == "component.ItemMetadata":
-        #     print(mud.parse_data(["string", "string", "string"], action["data"]))
+    #     # print(action)
+    #     if action["component_name"] == "component.MapConfig":
+    #         # print(mud.parse_data(["string", "string", "string"], action["data"]))
+    #         print(action)
     # print(actions)
     # print(len(actions))
     # print(mud.getValue("MapConfig", ""))
-    # print(mud.get_map())
+    # print(terrain_config)
+    # map = mud.get_map()
+    # print(map)
+    # def in_bounds( x, y):
+    #     return 0 <= x < 160 and 0 <= y < 96
+    
+    # def passable( x, y):
+    #     # print(x, y, map[x][y], terrain_config[map[x][y]].id, terrain_config.passable)
+    #     # return terrain_config[map[x][y]].passable
+    #     return map[x][y] == 0
+    
+    # def neighbors( x, y):
+    #     results = []
+    #     # 上
+    #     if in_bounds(x - 1, y) and passable(x - 1, y):
+    #         results.append((x - 1, y))
+    #     # 下
+    #     if in_bounds(x + 1, y) and passable(x + 1, y):
+    #         results.append((x + 1, y))
+    #     # 左
+    #     if in_bounds(x, y - 1) and passable(x, y - 1):
+    #         results.append((x, y - 1))
+    #     # 右  
+    #     if in_bounds(x, y + 1) and passable(x, y + 1):
+    #         results.append((x, y + 1))
+    #     return results
+    # def navigate(start, end):
+    #     # 广度优先搜索
+    #     queue = [start]
+    #     path = {start: None}
+    #     while queue:
+    #         # print(queue)
+    #         # 移除队首节点并获取相邻节点
+    #         row, col = queue.pop(0)
+    #         if (row, col) == end:
+    #             break
+    #         for neighbor in neighbors(row, col):
+    #             # 如果节点未在路径中,添加到队尾并添加到路径
+    #             if neighbor not in path:
+    #                 queue.append(neighbor)
+    #                 path[neighbor] = (row, col)
+    #     # 重构路径
+    #     route = [end]
+    #     while end != start:
+    #         row, col = path.get(end, (None, None))
+    #         if row is None:
+    #             break
+    #         route.append((row, col))
+    #         end = (row, col)
+    #     # 逆序打印路径
+    #     route.reverse()
+    #     return route
+    # print(mud.getValue("Position", ))
+    # print("John Lin's path:", navigate((28, 58), (110, 88)))
+    # print("Yuriko Yamamoto's path:", navigate((79, 91), (110, 88)))
+    # print("Sam Moore's path:", navigate((26, 88), (110, 88)))
+    # print("Tamara Taylor's path:", navigate((123, 91), (110, 88)))
     # print(new_account())
     # print(new_account())
     # print(new_account())

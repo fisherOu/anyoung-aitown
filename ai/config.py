@@ -19,21 +19,28 @@ class Config:
         self.print_log = get_json_value(
             obj, "print_log", True)
         
+        self.seconds_per_tick = get_json_value(
+            obj, "seconds_per_tick", 15 * 60)
+        
         self.agent_host = get_json_value(
-            obj, "agent_host", "localhost")
+            obj, "agent_host", "0.0.0.0")
         self.agent_port = get_json_value(
             obj, "agent_port", 9802)
+        agent_path = get_json_value(
+            obj, "agent_path", "exports")
+        self.agent_path = os.path.join(abs_path, agent_path)
+        if not os.path.exists(self.agent_path):
+            os.makedirs(self.agent_path, exist_ok=True)
 
         self.gpt_host = get_json_value(
             obj, "gpt_host", "localhost")
         self.gpt_port = get_json_value(
             obj, "gpt_port", 9801)
-        gpt_api_keys = get_json_value(
-            obj, "gpt_api_keys", "config/api_keys.json")
-        gpt_api_keys = os.path.join(abs_path, gpt_api_keys)
-        if not os.path.exists(gpt_api_keys):
-            raise ValueError("gpt api keys not found.")
-        with open(gpt_api_keys, "r", encoding="utf-8") as api_file:
+        gpt_api_keys_path = get_json_value(
+            obj, "gpt_api_keys_path", os.path.join(abs_path, "config/api_keys.json"))
+        if not os.path.exists(gpt_api_keys_path):
+            raise ValueError("GPT api key not found.")
+        with open(gpt_api_keys_path, "r", encoding="utf-8") as api_file:
             self.gpt_api_keys = json.loads(api_file.read())
         self.gpt3_cooldown = get_json_value(
             obj, "gpt3_cooldown", 30)
@@ -136,7 +143,7 @@ Your plan is:```
 {plan}
 ```
 Your action is a choose to achieve your plan, which can be decomposed as a single step in the actual situation.  A single step is not necessary to achieve the whole plan.
-Your operation should be chosen from available operation list. If you choose "go to your chosen buildings", you should choose a building on the map additionally. If you choose "talk with nearby people", you should choose a person nearby from Nearby people list additionally. If you choose other operation, you shoold choose an equipment additionally.
+Your operation should be chosen from available operation list. If you choose "go to your chosen buildings", you should choose a building on the map additionally. If you choose "talk with nearby people", you should choose a person nearby from Nearby people list additionally. If you choose other operation, you shoold choose an equipment and set a duration additionally.
 Available operation list is:```
 {operations}
 ```
@@ -146,7 +153,7 @@ Buildings on the map list:```
 Nearby people list is:```
 {people}
 ```
-What's your next action? Your action should be formed in JSON format, where the `location` field can be used to indicate the building to go to,  `equipment` field to indicate the equipments to interact with, the `operation` field indicates the behavior to interact with, the `name` field indicates the person to communicate with, and the `content` field indicates what to say to this person. The above fields can be a null value if you do not want to perform the related operation.
+What's your next action? Your action should be formed in JSON format, where the `location` field can be used to indicate the building to go to,  `equipment` field to indicate the equipments to interact with, the `operation` field indicates the behavior to interact with, the `duration` field to indicate how many seconds to interact, duration should be an integer, the `name` field indicates the person to communicate with, and the `content` field indicates what to say to this person. If someone is talking to you, you are supposed to response to him in a proper way. The above fields can be a null value if you do not want to perform the related operation.
 """)
         self.act_model = get_json_value(
             obj, "act_model", "gpt-3.5-turbo")
@@ -161,7 +168,7 @@ Your personality is :
 }```
 Based on your personality, your daily behavior also needs to conform to the worldview of the game. Of course, different personalities are allowed to have different understandings of the worldview. The worldview of the game is as follows:
 ```{
-Live a daily life.Talk more with your family.
+Have a daily routine like a real human.You will work, rest, eat, sleep, communicate with people, and leisure at reasonable times that match your own professional characteristics and personality traits. Even if you have an appointment with others, remember to travel. Once big things happen, you can do some creative writing in Art plaza that match your introduction.
 }```
 You have also been provided with a biography to introduce your identity, profession, and social relationships. This will serve as your basic introduction and cannot be changed. It is:
 ```{
@@ -192,7 +199,9 @@ You have also been provided with a biography to introduce your identity, profess
         }
 
         self.sight = get_json_value(
-            obj, "sight", 10)
+            obj, "sight", 5)
+        self.init_coin = get_json_value(
+            obj, "init_coin", 100)
         # self.terrain_prompt = get_json_value(
         #     obj, "terrain_prompt", "There is a block {x_distance} meters on your {LorR} and {y_distance} meters on your {TorB}, which is {passable} to pass.")
         self.player_prompt = get_json_value(

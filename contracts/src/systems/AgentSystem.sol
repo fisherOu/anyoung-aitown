@@ -4,6 +4,7 @@ import { addressToEntity } from "solecs/utils.sol";
 import { System, IWorld } from "solecs/System.sol";
 import { getAddressById } from "solecs/utils.sol";
 import { AgentComponent, ID as AgentComponentID, Agent } from "components/AgentComponent.sol";
+import { CoinComponent, ID as CoinComponentId } from "components/CoinComponent.sol";
 
 uint256 constant ID = uint256(keccak256("system.Agent"));
 
@@ -12,6 +13,7 @@ struct AgentInput {
   uint16 age;
   string occupation;
   string model;
+  uint256 initCoin;
 }
 
 contract AgentSystem is System {
@@ -40,6 +42,7 @@ contract AgentSystem is System {
     // player.set(entityId);
     Agent memory agent = Agent(inputParams.name, inputParams.age, inputParams.occupation, inputParams.model);
     agentComponent.set(entityId, agent);
+    CoinComponent(getAddressById(components, CoinComponentId)).set(entityId, inputParams.initCoin);
     // PositionComponent(getAddressById(components, PositionComponentID)).set(entityId, Coord(inputParams.x, inputParams.y));
     // MovableComponent(getAddressById(components, MovableComponentID)).set(entityId);
     // EncounterableComponent(getAddressById(components, EncounterableComponentID)).set(entityId);

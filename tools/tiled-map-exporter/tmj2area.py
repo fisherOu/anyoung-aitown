@@ -13,7 +13,7 @@ def extract_area_objects(json_data):
     for layer in json_data['layers']:
         if layer['type'] == 'objectgroup':
             for obj in layer['objects']:
-                if 'type' in obj and obj["type"] == "Area":
+                if 'type' in obj and (obj["type"] == "Area" or obj["type"] == "area"):
                     area_objects.append(obj)
                             
     return area_objects
@@ -21,20 +21,31 @@ def extract_area_objects(json_data):
 def merge_polygon_to_rectangle(area_objects, tile_width, tile_height):
     rectangles = []
     for obj in area_objects:
-        min_x = min_y = float('inf')
-        max_x = max_y = float('-inf')
-        for point in obj['polygon']:
-            min_x = min(min_x, point['x'])
-            min_y = min(min_y, point['y'])
-            max_x = max(max_x, point['x'])
-            max_y = max(max_y, point['y'])
-        rectangles.append({
-            'name': obj['name'],
-            'x': round((obj['x'] + min_x) / tile_width),
-            'y': round((obj['y'] + min_y) / tile_height),
-            'width': round((max_x - min_x) / tile_width),
-            'height': round((max_y - min_y) / tile_height)
-        })
+        if 'polygon' in obj:
+            min_x = min_y = float('inf')
+            max_x = max_y = float('-inf')
+
+            for point in obj['polygon']:
+                min_x = min(min_x, point['x'])
+                min_y = min(min_y, point['y'])
+                max_x = max(max_x, point['x'])
+                max_y = max(max_y, point['y'])
+
+            rectangles.append({
+                'name': obj['name'],
+                'x': round((obj['x'] + min_x) / tile_width),
+                'y': round((obj['y'] + min_y) / tile_height),
+                'width': round((max_x - min_x) / tile_width),
+                'height': round((max_y - min_y) / tile_height)
+            })
+        else:
+            rectangles.append({
+                'name': obj['name'],
+                'x': round(obj['x']/tile_width),
+                'y':  round(obj['y']/tile_height),
+                'width': round(obj['width']/tile_width),
+                'height': round(obj['height']/tile_height)
+            })
     return rectangles
 
 def generate_solidity_code(rectangles):
@@ -67,6 +78,7 @@ def main():
     tile_height = json_data['tileheight']
 
     area_objects = extract_area_objects(json_data)
+    print(area_objects)
     rectangles = merge_polygon_to_rectangle(area_objects, tile_width, tile_height)
     solidity_code = generate_solidity_code(rectangles)
 

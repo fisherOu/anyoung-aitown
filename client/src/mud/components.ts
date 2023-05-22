@@ -8,11 +8,10 @@ import {
 
 import {
   defineAnimationComponent,
-} from "./components/Animation";
-
-import {
   defineStateComponent,
-} from "./components/State";
+  defineMovementComponent,
+  defineLocalPositionComponent,
+} from "./components/Index";
 
 import { world } from "./world";
 
@@ -124,5 +123,7 @@ export const clientComponents = {
     value: Type.Number 
   }),
   Animation: defineAnimationComponent(world),
-  State: defineStateComponent(world)
+  State: defineStateComponent(world),
+  Movement: defineMovementComponent(world),
+  LocalPosition: defineLocalPositionComponent(world)
 };

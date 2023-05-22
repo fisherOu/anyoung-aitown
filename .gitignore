@@ -41,3 +41,5 @@ node_modules
 # test
 test.py
 api_keys.json
+ai/exports/
+counter.txt

@@ -11,10 +11,19 @@ services:
       - anvil-data:/var/anvil/data
     restart: always
 
-  client:
-    image: jpccr.ccs.tencentyun.com/llm-town/client:0.1.9
+  snapshot:
+    image: jpccr.ccs.tencentyun.com/llm-town/mud-ecs-snapshot:0.1.0
+    entrypoint:
+      - /service/ecs-snapshot
+    command:
+      - -ws-url=ws://node:8545
+      - -port=8545
+      - -snapshot-block-interval=600
+      - -initial-sync-block-batch-size=1000
+      - -initial-sync-block-batch-sync-timeout=20
+      - -worldAddresses=0x06fAddefDE8Dd5d4C6FAACe68b400754d960cb75
     ports:
-      - "3000:80"
+      - "8546:8546"
     restart: always
 
 volumes:

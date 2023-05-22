@@ -12,4 +12,4 @@ class ChatLogs(CommandBase):
         if name not in self.app.agents:
             return self.error('invalid name')
         agent = self.app.agents[name]
-        return {"logs": agent.languages}
+        return {"logs": agent.languages[-10:][::-1]}

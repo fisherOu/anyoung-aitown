@@ -1,5 +1,6 @@
 import re
 from command.command_base import CommandBase
+import datetime, time
 
 
 class React(CommandBase):
@@ -8,91 +9,106 @@ class React(CommandBase):
     def execute(self, params):
         if not self.check_params(params, ["name"]):
             return self.error('invalid params')
+        react_start = time.time()
+        self.app.log(f"start React: {str(datetime.datetime.now())}")
         name = params["name"]
         if name not in self.app.agents:
             return self.error('invalid name')
         agent = self.app.agents[name]
-        time_tick = self.get_nowtime_seconds()
+        time_tick = self.app.get_time_tick()  # self.get_nowtime_seconds()
+        #if agent.writing_prompt and not agent.writing:
+        #    agent.writing()
         reaction = agent.react("", time_tick)
         self.app.log(str(reaction))
+
+        action_start = time.time()
+        self.app.log(f"start action: {str(datetime.datetime.now())}")
+        # action
+        # {'location': 'Park', 'operation': 'go to chosen buildings', 'duration': 120, 'equipment': None, 'content': None, 'moving': True}
+        # {'location': 'Cafe', 'equipment': None, 'operation': 'go to chosen buildings', 'duration': 300, 'content': None, 'interaction': True}
         if "operation" in reaction:
             operation = reaction["operation"]
-            if operation.get("location") and operation.get("location") != agent.get_state("location"):
-                agent.navigate(operation['location'], "location")
+            if operation.get("moving"):
+                if agent.move_path and agent.move_to(agent.move_path[0][0], agent.move_path[0][1]):
+                    self.app.log("moving")
+                    agent.move_path.pop(0)
+            elif operation.get("location") and operation.get("location") != agent.get_state("location"):
                 self.app.log("Navigating to: "+operation.get("location"))
-                agent.action = "Moving to " + operation.get("location")
-            elif operation.get("equipment"):
-                agent.navigate(operation['equipment'], "equipment")
-                # agent.action = "Moving to " + operation.get("location")
-                self.app.log("Navigating to: "+operation.get("equipment")+".and will execute: "+operation["operation"])
-                agent.next_operation = operation["operation"]
+                agent.navigate(operation['location'], "location")
+            if operation.get("interaction") and operation.get("operation"):
+                self.app.log("continue: "+operation["operation"])
                 agent.action = operation["operation"]
-            elif operation.get("name"):
+            elif operation.get("operation") not in {"go to chosen buildings", "talk with nearby people"}:
+                # agent.navigate(operation['equipment'], "equipment")
+                o = operation.get("operation")
+                position = reaction.get("sight", dict()).get("operation_dict", dict()).get(o)
+                if position:
+                    # equipment_id = self.app.entities
+                    equipment = self.app.equipments[self.app.coord2equipment.get(position[0], dict()).get(position[1])]
+                    name = equipment["type"]
+                    self.app.log("Navigating to: "+name+".and will execute: "+o)
+                    agent.navigate(name, "equipment")
+                    agent.action = o
+                    duration = operation.get("duration", 60)
+                    if not duration:
+                        duration = 60
+                    agent.timer["action"] = time_tick + duration
+                    agent.timer["action_display"] = self.get_nowtime_seconds() + 10
+                # self.app.log("Navigating to: "+operation.get("location"))
+            if operation.get("name") and operation.get("content"):
                 language = operation.get("content", "")
-                target_id = self.app.agents[operation.get("name")].mud.player
+                target_id = 0
+                if operation.get("name") in self.app.agents:
+                    target_id = self.app.agents[operation.get("name")].mud.player
                 self.app.log("Chatting with: "+operation.get("name")+".and content is : "+operation.get("content"))
-                agent.mud.send("Chat", f'({target_id},"{language}")')
+                agent.mud.async_send("Chat", f'({target_id},"{language}")')
                 agent.language = language
-                agent.timer["chat"] = self.get_nowtime_seconds()
+                agent.speak_to = operation.get("name")
+                agent.timer["chat"] = self.get_nowtime_seconds() + 10
                 agent.languages.append({"source": agent.get_state("name"), "target": operation.get("name"), "content": language})
-                agent.action = "Chatting with " + operation.get("name")
-            # if "choices" in operations:
-            #     for choice in operations['choices']:
-            #         if choice == 'navigate':
-            #             # navigate
-            #             agent.navigate(operations['operation'])
-            #         elif choice in ['left', 'right', 'up', 'down']:
-            #             # move
-            #             agent.move(choice)
-            #         elif choice in self.app.agents:
-            #             # chat
-            #             language = agent.speak(choice, reaction.get("memory_prompt", ""), reaction.get("prompt", ""), time_tick)
-            #             if language:
-            #                 target = ""
-            #                 for name in self.app.agents.keys():
-            #                     if name in language:
-            #                         target = name
-            #                         break
-            #                 # target_id = 0
-            #                 if target:
-            #                     target_id = self.app.agents[target].mud.player
-            #                 agent.mud.send("Chat", f'({target_id},"{language}")')
-            #                 agent.language = language
-            #                 agent.timer["chat"] = self.get_nowtime_seconds()
-            #                 agent.languages.append({"source": agent.get_state("name"), "target": name, "content": language})
-            #         else:
-            #             # equipment
-            #             operation_dict = reaction.get("sight", dict()).get("operation_dict", dict())
-            #             position = operation_dict.get(choice)
-            #             if not position:
-            #                 continue
-            #             entity = self.app.position.get(position[0], dict()).get(position[1])  # agent.mud.getEntitiesWithValue("Position", f"({position[0]},{position[1]})")
-            #             agent.mud.send("Interaction", f'({entity},"{choice}")')
-            #             agent.action = choice
-        if agent.language and self.get_nowtime_seconds() > agent.timer.get("chat", 0) + 60:
-            # status plan
+                # agent.status = "Chatting with " + operation.get("name")
+
+        # timer
+        if agent.language and self.get_nowtime_seconds() > agent.timer.get("chat", 0):
+            # language stay 60s on chain
             self.app.log("chatting time out: "+agent.language)
-            agent.mud.send("CancelChat", f'{agent.mud.player}')
+            agent.mud.async_send("CancelChat", f'{agent.mud.player}')
+            agent.finished.add(f'speaking "{agent.language}" to {agent.speak_to}')
             agent.language = ""
+            agent.speak_to = ""
             agent.timer["chat"] = 0
-            agent.status = agent.action
-            agent.mud.send("Status", f'"{agent.action}"')
-            # agent.mud.send("Status", f'"{agent.action}"')
-        # elif agent.language:
-        #     # clear chat
-        #     self.app.log("chatting status: ")
-        #     agent.mud.send("Status", '"Chatting"')
-        #     agent.status = "Chatting"
-        elif agent.action:
-            agent.status = agent.action
+        if agent.action and agent.timer.get("agent", 0) and time_tick > agent.timer.get("action", 0):
+            self.app.log("action time out: "+agent.action)
+            agent.finished.add(agent.action)
+            agent.action = ""
+            agent.timer["action"] = 0
+            agent.timer["action_display"] = 0
+        if agent.emotion != agent.last_emotion and agent.emotion and self.get_nowtime_seconds() > agent.timer.get("emotion", 0):
+            agent.last_emotion = agent.emotion
+            agent.timer["emotion"] = 0
+
+        # status
+        if agent.emotion != agent.last_emotion and agent.emotion and agent.timer.get("emotion", 0) > 0:
+            agent.status = agent.emotion
+        if agent.language:
+            agent.status = "Talk to " + agent.speak_to + ": " + agent.language  # "Chatting with " + agent.speak_to
+        elif agent.action and self.get_nowtime_seconds() < agent.timer.get("action_display", 0):
+            agent.status = "Action now: " + agent.action
             self.app.log("status: "+agent.status)
-            agent.mud.send("Status", f'"{agent.action}"')
-        elif agent.move_path:
+        elif agent.plan != "no plan yet":
+            agent.status = "Planning to: " + agent.plan
+        elif agent.move_path and agent.navigate_to:
             # status move
             self.app.log("status: moving")
-            agent.mud.send("Status", '"Moving"')
-        # if agent.mud.getValue("Plan", f'{agent.mud.player}') != agent.plan:
-        #     # new plan
-        #     agent.mud.set("Plan", f'"{agent.plan}"')
-        self.app.flush_events()
+            agent.status = f"Moving to {agent.navigate_to}"
+        else:
+            agent.status = "Wandering"
+        if agent.status != self.app.entities.get(agent.mud.player, dict()).get("Status"):
+            agent.mud.send("Status", f'"{agent.status}"')
+        if agent.plan != self.app.entities.get(agent.mud.player, dict()).get("Plan"):
+            agent.mud.send("Plan", f'"{agent.plan}"')
+        self.app.log(f"end action: {str(datetime.datetime.now())}, time used: {str(time.time()-action_start)}")
+        # agent.save()
+        # self.app.flush_events()
+        self.app.log(f"end React: {str(datetime.datetime.now())}, time used: {str(time.time()-react_start)}")
         return True

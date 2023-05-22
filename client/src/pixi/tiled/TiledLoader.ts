@@ -1,6 +1,8 @@
 import * as PIXI from "pixi.js";
 
 export class TiledLoader extends PIXI.utils.EventEmitter{
+  private texturesCache: { [key: string]: PIXI.Texture[] } = {};
+
   private async getTilesetTexture(tilesetId: number, tilesets: any[], basePath: string): Promise<PIXI.Texture> {
     const tileset = tilesets.find((tileset) => tileset.firstgid <= tilesetId && tilesetId < (tileset.firstgid + tileset.tilecount));
   
@@ -8,55 +10,150 @@ export class TiledLoader extends PIXI.utils.EventEmitter{
       throw new Error(`Tileset for tile id ${tilesetId} not found.`);
     }
   
-    const textureUrl = basePath + tileset.image;
-    const texture = await PIXI.Assets.load(textureUrl);
-    if (texture && texture.baseTexture) {
-      texture.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
+    const textureKey = basePath + tileset.image;
+    let textures: PIXI.Texture[] = [];
+
+    if (this.texturesCache[textureKey]) {
+      textures = this.texturesCache[textureKey];
+    } else {
+      const textureUrl = basePath + tileset.image;
+
+      let texture = await PIXI.Assets.load(textureUrl);
+      if (texture && texture.baseTexture) {
+        texture.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
+      }
+
+      const tilesPerRow = Math.floor((tileset.imagewidth - tileset.margin) / (tileset.tilewidth + tileset.spacing));
+      const numRows = Math.ceil(tileset.tilecount / tilesPerRow);
+    
+      for (let row = 0; row < numRows; row++) {
+        for (let col = 0; col < tilesPerRow; col++) {
+          const x = tileset.margin + col * (tileset.tilewidth + tileset.spacing);
+          const y = tileset.margin + row * (tileset.tileheight + tileset.spacing);
+          const rect = new PIXI.Rectangle(x, y, tileset.tilewidth, tileset.tileheight);
+          textures.push(new PIXI.Texture(texture.baseTexture, rect));
+        }
+      }
+
+      this.texturesCache[textureKey] = textures;
     }
     
-    const textures: PIXI.Texture[] = [];
-  
-    const tilesPerRow = Math.floor((tileset.imagewidth - tileset.margin) / (tileset.tilewidth + tileset.spacing));
-    const numRows = Math.ceil(tileset.tilecount / tilesPerRow);
-  
-    for (let row = 0; row < numRows; row++) {
-      for (let col = 0; col < tilesPerRow; col++) {
-        const x = tileset.margin + col * (tileset.tilewidth + tileset.spacing);
-        const y = tileset.margin + row * (tileset.tileheight + tileset.spacing);
-        const rect = new PIXI.Rectangle(x, y, tileset.tilewidth, tileset.tileheight);
-        textures.push(new PIXI.Texture(texture.baseTexture, rect));
-      }
-    }
-  
     return textures[tilesetId - tileset.firstgid];
   }
   
+  private processTileId(_tileId: number): { tileId: number, flippedHorizontally: boolean, flippedVertically: boolean, flippedDiagonally: boolean, rotatedHexagonal120: boolean } {
+    const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
+    const FLIPPED_VERTICALLY_FLAG = 0x40000000;
+    const FLIPPED_DIAGONALLY_FLAG = 0x20000000;
+    const ROTATED_HEXAGONAL_120_FLAG = 0x10000000;
+  
+    const flippedHorizontally = (_tileId & FLIPPED_HORIZONTALLY_FLAG) !== 0;
+    const flippedVertically = (_tileId & FLIPPED_VERTICALLY_FLAG) !== 0;
+    const flippedDiagonally = (_tileId & FLIPPED_DIAGONALLY_FLAG) !== 0;
+    const rotatedHexagonal120 = (_tileId & ROTATED_HEXAGONAL_120_FLAG) !== 0;
+  
+    // 清除所有翻转标志
+    const tileId = _tileId & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG);
+  
+    return { tileId, flippedHorizontally, flippedVertically, flippedDiagonally, rotatedHexagonal120  };
+  }
+
   private async processLayers(parent: PIXI.Container, mapData: any, layers: any[], tilesets: any[], basePath: string): Promise<PIXI.Container[]> {
     const containers: PIXI.Container[] = [];
 
     for (const layer of layers) {
       if (layer.type === "tilelayer") {
         const tileLayerContainer = new PIXI.Container();
-        const data = layer.data as number[];
 
-        for (let y = 0; y < layer.height; y++) {
-          for (let x = 0; x < layer.width; x++) {
-            const tileId = data[y * layer.width + x];
+        if (layer.chunks) {
+          for (const chunk of layer.chunks) {
+            const data = chunk.data as number[];
 
-            if (tileId !== 0) {
-              const tileTexture = await this.getTilesetTexture(tileId, tilesets, basePath);
-              const sprite = new PIXI.Sprite(tileTexture);
+            for (let y = 0; y < chunk.height; y++) {
+              for (let x = 0; x < chunk.width; x++) {
+                const tileIdWithFlags  = data[y * chunk.width + x];
+                const { tileId, flippedHorizontally, flippedVertically, flippedDiagonally  } = this.processTileId(tileIdWithFlags);
 
-              sprite.x = x * mapData.tilewidth;
-              sprite.y = y * mapData.tileheight;
+                if (tileId !== 0) {
+                  const tileTexture = await this.getTilesetTexture(tileId, tilesets, basePath);
+                  const sprite = new PIXI.Sprite(tileTexture);
 
-              sprite.interactive = true
+                  // 将精灵的锚点设置为中心
+                  sprite.anchor.set(0.5, 0.5);
+                  sprite.x = (x + chunk.x) * mapData.tilewidth + mapData.tilewidth / 2;
+                  sprite.y = (y + chunk.y) * mapData.tileheight + mapData.tileheight / 2;
 
-              sprite.on('pointerdown', (e: any)=>{
-                this.handleTileClick(parent, mapData, e)
-              });
+                  // 根据翻转标志设置精灵的缩放和旋转
+                  sprite.scale.x = flippedHorizontally ? -1 : 1;
+                  sprite.scale.y = flippedVertically ? -1 : 1;
+                  if (flippedDiagonally) {
+                    sprite.rotation = Math.PI / 2;
+                    sprite.scale.x *= -1;
+                  }
 
-              tileLayerContainer.addChild(sprite);
+                  sprite.interactive = true;
+                  sprite.cursor = "pointer"
+
+                  sprite.on('pointerdown', (e: any) => {
+                    this.handleTileClick(parent, mapData, e);
+                  });
+
+                  sprite.on("mousedown", (e: any)=>{
+                    e.target.cursor = "grab"
+                  })
+              
+                  sprite.on("mouseup", (e: any)=>{
+                    e.target.cursor = "pointer"
+                  })
+
+                  tileLayerContainer.addChild(sprite);
+                }
+              }
+            }
+          }
+        } else {
+          const data = layer.data as number[];
+
+          for (let y = 0; y < layer.height; y++) {
+            for (let x = 0; x < layer.width; x++) {
+              const tileIdWithFlags  = data[y * layer.width + x];
+              const { tileId, flippedHorizontally, flippedVertically, flippedDiagonally  } = this.processTileId(tileIdWithFlags);
+
+              if (tileId !== 0) {
+                const tileTexture = await this.getTilesetTexture(tileId, tilesets, basePath);
+                const sprite = new PIXI.Sprite(tileTexture);
+
+                // 将精灵的锚点设置为中心
+                sprite.anchor.set(0.5, 0.5);
+                sprite.x = x * mapData.tilewidth + mapData.tilewidth / 2;
+                sprite.y = y * mapData.tileheight + mapData.tileheight / 2;
+
+
+                // 根据翻转标志设置精灵的缩放和旋转
+                sprite.scale.x = flippedHorizontally ? -1 : 1;
+                sprite.scale.y = flippedVertically ? -1 : 1;
+                if (flippedDiagonally) {
+                  sprite.rotation = Math.PI / 2;
+                  sprite.scale.x *= -1;
+                }
+
+                sprite.interactive = true;
+                sprite.cursor = "pointer"
+
+                sprite.on('pointerdown', (e: any) => {
+                  this.handleTileClick(parent, mapData, e);
+                });
+
+                sprite.on("mousedown", (e: any)=>{
+                  e.target.cursor = "grab"
+                })
+            
+                sprite.on("mouseup", (e: any)=>{
+                  e.target.cursor = "pointer"
+                })
+
+                tileLayerContainer.addChild(sprite);
+              }
             }
           }
         }

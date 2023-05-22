@@ -5,12 +5,11 @@
     "print_log": true,
     "gpt_host": "localhost",
     "gpt_port": 9801,
-    "gpt_api_keys": "config/api_keys.json",
     "gpt3_cooldown": 30,
     "gpt_temp": 0.6,
     "gpt_proxy": "http://127.0.0.1:7890",
     "gpt_use_proxy": false,
-    "world_address": "0x06fAddefDE8Dd5d4C6FAACe68b400754d960cb75",
+    "world_address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
     "w3_RPC": "http://43.163.220.70:8545",
     "abi_dir": "contracts/abi",
     "mud_components": [
@@ -39,6 +38,10 @@
             "types": ["string"]
         },
         {
+            "name": "Plan",
+            "types": ["string"]
+        },
+        {
             "name": "Position",
             "types": ["(int32,int32)"]
         },
@@ -53,6 +56,10 @@
         {
             "name": "MapConfig",
             "types": ["uint32", "uint32", "bytes"]
+        },
+        {
+            "name": "Broadcast",
+            "types": ["string"]
         }
     ],
     "mud_systems": [
@@ -62,6 +69,11 @@
         "Agent",
         "Interaction",
         "Status",
-        "CancelChat"
+        "CancelChat",
+        "CancelPrompt",
+        "Broadcast",
+        "CancelBroadcast",
+        "Plan",
+        "TimeAware"
     ]
 }

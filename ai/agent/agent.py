@@ -1,6 +1,8 @@
 from typing import List, Dict, Any
 import re
 import json
+import os
+import datetime, time
 
 from agent.memory.memory import Memory, Observation, Background, Plan, Reflection, BACKGROUND, OBSERVATION, PLAN, REFLECTION
 from agent.memory.memory_stream import MemoryStream
@@ -36,19 +38,30 @@ class Agent:
         if not self.app.entities.get(self.mud.player, dict()).get("Status"):
             self.mud.send("Status", '"Wandering"')
         self.move_path = list()
+        # action: stop time
         self.timer = dict()
+        self.finished = set()
+
         self.action = ""
         self.status = "Wandering"
-        self.next_operation = ""
+        # self.next_operation = ""  # action finish -> ask
         self.plan = "no plan yet"
+        self.last_emotion = ""
         self.emotion = ""
         self.language = ""
+        self.speak_to = ""
+        self.navigate_to = ""
+        self.last_big_event = ""
+        self.writing = ""
+        self.writing_prompt = ""
         self.languages = list()
         # TODO: record last sight & save observation only when new equip or agent in sight
         self.last_sight = set()
+        self.last_chats = dict()
         self.sight = dict()
-        self.operation = {"choices": [], "operation": ""}
         self.memory_prompt = ""
+        self.operation = dict()
+        self.load()
 
     def react(self, observation: str, time_tick: int) -> Dict[str, Any]:
         """
@@ -61,33 +74,48 @@ class Agent:
             observation = sight["observation"]
             operations = sight["operations"]
             entities = sight["entities"]
-            operation_dict = sight["operation_dict"]
+            chats = sight["chats"]
+            finishes = sight["finishes"]
+            broadcast = sight["broadcast"]
+            # operation_dict = sight["operation_dict"]
             self.app.log("sight: "+str(sight))
             found = False
             for entity in entities:
                 if entity not in self.last_sight:
+                    # no new entity in sight
                     found = True
                     break
-            if (not found and len(entities) > 0) or (len(entities) == 0 and self.plan and self.memory_prompt):
-                # old sight
-                # if self.move_path and self.move_to(self.move_path[0][0], self.move_path[0][1]):
-                #     self.move_path.pop(0)
-                print(self.move_path)
-                if len(self.move_path) == 0 and self.next_operation and self.sight.get("operation_dict", dict()).get(self.next_operation):
-                    position = self.sight.get("operation_dict", dict()).get(self.next_operation)
-                    entity = self.app.position.get(position[0], dict()).get(position[1])  # agent.mud.getEntitiesWithValue("Position", f"({position[0]},{position[1]})")
-                    self.mud.send("Interaction", f'({entity},"{self.next_operation}")')
-                    self.action = self.next_operation
-                    self.next_operation = ""
+            if not found:
+                for person, content in chats.items():
+                    if person not in self.last_chats or content != self.last_chats[person]:
+                        # no new chat language
+                        found = True
+                        break
+            if (self.move_path or (self.action != "Wandering" and not self.action.startswith("Chatting"))) and not found and not finishes and not broadcast:  # not finishes: no finished action/chat  not broadcast: no broadcast
+                # moving or interacting without finished things and broadcast
+                # print(self.move_path)
+                # if len(self.move_path) == 0 and self.next_operation and self.sight.get("operation_dict", dict()).get(self.next_operation):
+                #     position = self.sight.get("operation_dict", dict()).get(self.next_operation)
+                #     entity = self.app.position.get(position[0], dict()).get(position[1])  # agent.mud.getEntitiesWithValue("Position", f"({position[0]},{position[1]})")
+                #     self.mud.send("Interaction", f'({entity},"{self.next_operation}")')
+                #     self.action = self.next_operation
+                #     self.next_operation = ""
+                # {'location': 'Park', 'equipment': None, 'operation': 'talk with nearby people', 'name': 'Mei Lin', 'content': "Hey Mei Lin, I heard you like music as well. What's your favorite genre?"}
+                operation = self.operation
+                if len(self.move_path):
+                    operation["moving"] = True
+                else:
+                    operation["interaction"] = True
                 self.last_sight = entities
+                self.last_chats = chats
                 self.sight = sight
-                if "name" in self.operation:
-                    del self.operation["name"]
+                if "name" in operation:
+                    del operation["name"]
                 # if "name" in self.operation:
                 #     del self.operation["name"]
-                return {"status": self.status, "operation": self.operation, "sight": self.last_sight, "memory_prompt": self.memory_prompt, "plan": self.plan}
-        # 用plan检索评价observation importance的记忆流
+                return {"status": self.status, "operation": operation, "sight": self.sight, "memory_prompt": self.memory_prompt, "plan": self.plan}
         related_person = self._parse_related_person(observation)
+        # self.mud.async_send("Status", f'"Thinking"')
         prompt = Observation(observation, 0, self.get_state("location"), related_person, time_tick)
         # retrieve: get memory-list
         memory = self._retrieve(prompt, time_tick)
@@ -96,6 +124,7 @@ class Agent:
         memory_prompt = self._prompt(memory, prompt)
         self.app.log("memory_prompt: "+memory_prompt)
         # save observation
+        # TODO: get importance & store_memory -> async
         prompt.importance = self._get_importance(background_prompt, memory_prompt, prompt, prompt.content, "observation")
         self.memory_stream.store_memory(prompt)
         # plan: get & save plan
@@ -181,6 +210,82 @@ class Agent:
 
     def complete_plan(self):
         self.memory_stream.complete_plan()
+    
+    def export_memory(self) -> List[Dict[str, Any]]:
+        return self.memory_stream.export_memory()
+    
+    def save(self):
+        json_obj = self.to_json_obj()
+        # print(json_obj)
+        path = os.path.join(self.app.config.agent_path, f'{self.get_state("name")}.json')
+        with open(path, 'w', encoding='utf-8') as agent_file:
+            # json_obj = json.loads(agent_file)
+            agent_file.write(json.dumps(json_obj, ensure_ascii=False, separators=(",", ":")))
+    
+    def to_json_obj(self) -> Dict[str, Any]:
+        json_obj = {
+            'memory_stream': self.memory_stream.to_json_obj(),
+            'properties': self.properties.to_json(),
+            'background_stored': self.background_stored,
+            'move_path': [[x[0], x[1]] for x in self.move_path],
+            'timer': self.timer,
+            'finished': list(self.finished),
+            'action': self.action,
+            'status': self.status,
+            'plan': self.plan,
+            'last_emotion': self.last_emotion,
+            'emotion': self.emotion,
+            'language': self.language,
+            'speak_to': self.speak_to,
+            'navigate_to': self.navigate_to,
+            'last_big_event': self.last_big_event,
+            'languages': self.languages,
+            'last_sight': list(self.last_sight),
+            'operation': self.operation,
+            'last_chats': self.last_chats,
+            'sight': self.sight,
+            'memory_prompt': self.memory_prompt,
+        }
+        json_obj['sight']["entities"] = list(json_obj['sight']["entities"])
+        json_obj['sight']["people"] = list(json_obj['sight']["people"])
+        json_obj['sight']["finishes"] = list(json_obj['sight']["finishes"])
+        json_obj['sight']["operation_dict"] = {k: [v[0], v[1]] for k, v in json_obj['sight']["operation_dict"].items()}
+        return json_obj
+
+    def load(self):
+        path = os.path.join(self.app.config.agent_path, f'{self.get_state("name")}.json')
+        if os.path.exists(path):
+            json_obj = dict()
+            with open(path, 'r', encoding='utf-8') as agent_file:
+                json_obj = json.loads(agent_file.read())
+            self.from_json_obj(json_obj)
+    
+    def from_json_obj(self, json_obj: Dict[str, Any]):
+        self.memory_stream.from_json_obj(json_obj['memory_stream'])
+        self.properties =  Properties(json_obj['properties'])
+        self.background_stored = json_obj['background_stored']
+        self.move_path = [(x[0], x[1]) for x in json_obj['move_path']]
+        self.timer = json_obj['timer']
+        self.finished = set(json_obj['finished'])
+        self.action = json_obj['action']
+        self.status = json_obj['status']
+        self.plan = json_obj['plan']
+        self.last_emotion = json_obj['last_emotion']
+        self.emotion = json_obj['emotion']
+        self.language = json_obj['language']
+        self.speak_to = json_obj['speak_to']
+        self.navigate_to = json_obj['navigate_to']
+        self.last_big_event = json_obj.get('last_big_event', "")
+        self.languages = json_obj['languages']
+        self.operation = json_obj['operation']
+        self.last_sight = set(json_obj['last_sight'])
+        self.last_chats = json_obj['last_chats']
+        json_obj['sight']["entities"] = set(json_obj['sight']["entities"])
+        json_obj['sight']["people"] = set(json_obj['sight']["people"])
+        json_obj['sight']["finishes"] = set(json_obj['sight']["finishes"])
+        json_obj['sight']["operation_dict"] = {k: (v[0], v[1]) for k, v in json_obj['sight']["operation_dict"].items()}
+        self.sight = json_obj['sight']
+        self.memory_prompt = json_obj['memory_prompt']
 
     def _retrieve(self, prompt: Memory, time_tick: int) -> List[Memory]:
         return self.memory_stream.get_similar_memory(prompt, self.config.retrieve_params, time_tick)
@@ -197,6 +302,8 @@ class Agent:
         return "".join(prompts)
 
     def _plan(self, backgroud_prompt: str, memory_prompt: str, origin_prompt: Memory, time_tick: int) -> Memory:
+        start = time.time()
+        self.app.log(f"{str(datetime.datetime.now())} plan start")
         plan_prompt = self.config.plan_prompt
         plan_prompt = self._replace_keyInfo(plan_prompt, memory_prompt, origin_prompt, time_tick)
         plan_prompt = plan_prompt.replace("{plan}", self.plan)
@@ -206,20 +313,32 @@ class Agent:
             plan_content = plan_content[0]
         else:
             plan_content = "{}"
-        print("plan_content:", plan_content)
-        plan_content = json.loads(plan_content).get("interaction", "")
+        # print("plan_content:", plan_content)
+        content = json.loads(plan_content).get("interaction", "")
+        if not content:
+           content = json.loads(plan_content).get("Interaction", "")
+        if content == self.plan:
+            return self.memory_stream.plan
         # raise ValueError(f"Plan: {plan_content[0]}")
-        importance = self._get_importance(backgroud_prompt, memory_prompt, origin_prompt, plan_content, "plan")
-        return Plan(plan_content, importance, self.get_state("location"), origin_prompt.related_person, time_tick)
+        importance = self._get_importance(backgroud_prompt, memory_prompt, origin_prompt, content, "plan")
+        plan = Plan(content, importance, self.get_state("location"), origin_prompt.related_person, time_tick)
+        self.app.log(f"{str(datetime.datetime.now())} plan end time used: {str(time.time() - start)}")
+        return plan
 
     def _reflect(self, backgroud_prompt: str, memory_prompt: str, origin_prompt: Memory, time_tick: int) -> Memory:
+        start = time.time()
+        self.app.log(f"{str(datetime.datetime.now())} reflect start")
         reflect_prompt = self.config.reflect_prompt
         reflect_prompt = self._replace_keyInfo(reflect_prompt, memory_prompt, origin_prompt, time_tick)
         content = self._ask(backgroud_prompt, reflect_prompt, self.config.reflect_model)
         importance = self._get_importance(backgroud_prompt, memory_prompt, origin_prompt, content, "reflection")
-        return Reflection(content, importance, origin_prompt, self.get_state("location"), origin_prompt.related_person, time_tick)
+        reflection = Reflection(content, importance, origin_prompt, self.get_state("location"), origin_prompt.related_person, time_tick)
+        self.app.log(f"{str(datetime.datetime.now())} reflect end time used: {str(time.time() - start)}")
+        return reflection
 
     def _act(self, backgroud_prompt: str, memory_prompt: str, origin_prompt: Memory, plan: str, sight: Dict[str, Any], time_tick: int) -> Dict[str, Any]:
+        start = time.time()
+        self.app.log(f"{str(datetime.datetime.now())} act start")
         act_prompt = self.config.act_prompt
         act_prompt = self._replace_keyInfo(act_prompt, memory_prompt, origin_prompt, time_tick)
         act_prompt = act_prompt.replace("{plan}", plan)
@@ -233,7 +352,7 @@ class Agent:
             }
             interactions.extend(operations)
             equipments.append(equipment)
-        interactions.append("go to \'your chosen buildings\'")
+        interactions.append("go to chosen buildings")
         interactions.append("talk with nearby people")
         act_prompt = act_prompt.replace("{equipments}", json.dumps(equipments, ensure_ascii=False))
         act_prompt = act_prompt.replace("{operations}", json.dumps([x for x in set(interactions)], ensure_ascii=False))
@@ -245,6 +364,7 @@ class Agent:
         else:
             act_content = "{}"
         action = json.loads(act_content)
+        self.app.log(f"{str(datetime.datetime.now())} act end time used: {str(time.time() - start)}")
         return action
     
     def _operate(self, backgroud_prompt: str, memory_prompt: str, origin_prompt: Memory, content: str, operations: Dict[str, str], time_tick: int) -> str:
@@ -262,9 +382,15 @@ class Agent:
 
     def _ask(self, system: str, user: str, model: str) -> str:
         # self.app.log(f"system prompt: {system} and user prompt: {user} using model: {model}")
-        return self.gpt.call(system, user, model)
+        start = time.time()
+        self.app.log(f"{str(datetime.datetime.now())} gpt ask start")
+        response = self.gpt.call(system, user, model)
+        self.app.log(f"{str(datetime.datetime.now())} gpt ask end. time used: {str(time.time() - start)}")
+        return response
 
     def _get_importance(self, background_prompt: str, memory_prompt: str, origin_prompt: Memory, content: str, source: str) -> int:
+        start = time.time()
+        self.app.log(f"{str(datetime.datetime.now())} importance start")
         origin = self._transfer_prompt(origin_prompt, None)
         importance_prompt = self.config.importance_prompt
         importance_prompt = importance_prompt.replace("{origin}", origin)
@@ -273,6 +399,7 @@ class Agent:
         importance_prompt = importance_prompt.replace("{source}", source)
         answer = self._ask(background_prompt, importance_prompt, self.config.importance_model)
         score = self._parse_importance_score(answer)
+        self.app.log(f"{str(datetime.datetime.now())} importance end: {str(score)} time used: {str(time.time() - start)}")
         return score
 
     def _parse_importance_score(self, answer: str) -> int:
@@ -296,8 +423,8 @@ class Agent:
     
     def _parse_related_person(self, content: str) -> List[str]:
         friends = list()
-        for friend in self.get_state("friends"):
-            if friend in content:
+        for friend in self.app.agents.keys():
+            if friend in content and friend != self.get_state("name"):
                 friends.append(friend)
         return friends
 
@@ -341,14 +468,21 @@ class Agent:
         # if self.mud.has("Player", f"{self.mud.player}"):
         #     return
         found = False
-        for x in range(self.app.width):
-            for y in range(self.app.height):
+        location = self.app.locations.get(self.get_state("location"), None)
+        if not location or not location.get_state("range"):
+            raise ValueError(f"{self.get_state('location')} not found")
+        range_value = location.get_state("range")
+        # if range_value and range_value[0] <= x <= range_value[2] and range_value[1] <= y <= range_value[3]:
+        #     self.set_state("location", location)
+        for x in range(range_value[0], range_value[2] + 1):
+            for y in range(range_value[1], range_value[3] + 1):
                 if self.app.position.get(x, dict()).get(y):
                     continue
                 found = True
-                self.mud.send("Agent", f'("{self.get_state("name")}",{self.get_state("age")},"{self.get_state("career")}","{self.get_state("model")}")')
+                self.mud.send("Agent", f'("{self.get_state("name")}",{self.get_state("age")},"{self.get_state("career")}","{self.get_state("model")}",{self.config.init_coin})')
                 self.mud.send("JoinGame", f'({x},{y})')
                 self.mud.send("Status", '"Wandering"')
+                self.mud.send("Plan", '"no plan yet"')
                 break
             if found:
                 break
@@ -357,16 +491,27 @@ class Agent:
         return abs(coord2[0]-coord1[0])+abs(coord2[1]-coord1[1])
 
     def _get_sight(self, time_tick: int) -> Dict[str, Any]:
+        start = time.time()
+        self.app.log(f"{str(datetime.datetime.now())} get observation start")
         cur_position = self.app.entities.get(self.mud.player, dict()).get("Position")  # self.app.entities.get(self.mud.player, dict()).get("Position") # self.mud.getValue("Position", self.mud.player)
         if not cur_position:
             return
         cur_position = cur_position[0]
         sight = list()
         sight.append(f"current time is: {format_timestamp(time_tick)}.")
+        broadcast = ""
+        if self.app.entities.get(self.mud.singletonID, dict()).get("Broadcast"):
+            big_event = self.app.entities.get(self.mud.singletonID, dict()).get("Broadcast")
+            if big_event != self.last_big_event:
+                broadcast = big_event
+                sight.append(f"Big things happen: {big_event}")
+                self.last_big_event = big_event
         operations = dict()
         operation_dict = dict()
         entities = set()
         people = set()
+        chats = dict()
+        finishes = set()
         equipments = dict()
         # get l r t b
         left = max(0, cur_position[0] - self.config.sight)
@@ -395,7 +540,8 @@ class Agent:
                     equipment = self.app.equipments[self.app.coord2equipment.get(x, dict()).get(y)]
                     name = equipment["type"]
                     if name not in entities:
-                        entities.add(name)
+                        # TODO: 20230521 remove equipment triggers
+                        # entities.add(name)
                         if equipment.get("config"):
                             # prompt += equipment["config"].description
                             self.app.log("get_sight-equipment: "+equipment["config"].description)
@@ -411,7 +557,7 @@ class Agent:
                                         # equipment_operation = equipment_operation.replace("{distance}", str(operation["distance"]))
                                         equipment_operation = equipment_operation.replace("{owner}", "need" if operation["owner"] else "need not")
                                         operations[operation["name"]] = equipment_operation
-                                        self.app.log("get_sight-equipment-operation: "+equipment_operation)
+                                        # self.app.log("get_sight-equipment-operation: "+equipment_operation)
                                         operation_dict[operation["name"]] = (x, y)
                                         equipments[name].append(operation["name"])
                 if self.app.position.get(x, dict()).get(y):
@@ -438,6 +584,7 @@ class Agent:
                             speaking = agent.language
                             if speaking:
                                 sub_prompt = sub_prompt + f"{name} is speaking: {speaking}."
+                                chats[name] = speaking
                             chat = self.app.entities.get(player_id, dict()).get("Chat")
                             if chat:
                                 content = chat[0]
@@ -454,7 +601,7 @@ class Agent:
                                 prompt += sub_prompt
                             # prompt += sub_prompt
                             # prompt += chat_prompt
-                            self.app.log("get_sight-player: "+sub_prompt)
+                            # self.app.log("get_sight-player: "+sub_prompt)
                 if not prompt:
                     continue
                 # x_distance = str(abs(x-cur_position[0]))
@@ -467,6 +614,11 @@ class Agent:
                 # prompt = prompt.replace("{TorB}", TorB)
                 # self.app.log("get_sight-prompt: "+prompt)
                 sight.append(prompt)
+        if self.finished:
+            for item in self.finished:
+                sight.append(f"You finished {item}.")
+            finishes = self.finished
+            self.finished = set()
         sight = [f"You got {','.join(list(entities))} nearby."] + sight
         # if cur_position[0] > 0:
         #     direct = self.config.move_prompt.replace("{direct}", "left")
@@ -481,14 +633,15 @@ class Agent:
         #     direct = self.config.move_prompt.replace("{direct}", "down")
         #     operations["down"] = direct
         operations["navigate"] = self.config.navigate_prompt
-        return {"observation": "".join(sight), "operations": operations, "entities": entities, "equipments": equipments, "people": people, "operation_dict": operation_dict}
+        self.app.log(f"{str(datetime.datetime.now())} get observation end time used: {str(time.time() - start)}")
+        return {"observation": "".join(sight), "operations": operations, "entities": entities, "equipments": equipments, "people": people, "operation_dict": operation_dict, "chats": chats, "finishes": finishes, "broadcast": broadcast}
 
     def _navigate(self, start, end):
         # 广度优先搜索
         queue = [start]
         path = {start: None}
         while queue:
-            print(queue)
+            # print(queue)
             # 移除队首节点并获取相邻节点
             row, col = queue.pop(0)
             if (row, col) == end:
@@ -524,10 +677,10 @@ class Agent:
         #     return
         location = text
         position = None
-        print(location, self.app.locations)
+        # print(location, self.app.locations)
         if target_type == "location" and location in self.app.locations:
             position = self.app.locations[location].get_state("enterance")
-            print("to location:", position)
+            # print("to location:", position)
         if target_type == "equipment" and location in self.app.equipment2coords:
             positions = self.app.equipment2coords[location]
             nearest = -1
@@ -538,15 +691,35 @@ class Agent:
                 elif self.distance(cur_position, p) < nearest:
                     nearest = self.distance(cur_position, p)
                     position = p
-            print("to equipment:", position)
+            # print("to equipment:", position)
         if not position:
-            print("position not found")
+            # print("position not found")
             return
+
+        # search a passable point around position
+        found = False
         position = tuple(position)
-        print("target position:", position)
+        search_range = 1
+        searched = set()
+        while not found or search_range < 10:
+            for x in range(max(position[0]-search_range, 0), min(position[0]+search_range+1, self.app.width)):
+                for y in range(max(position[1]-search_range, 0), min(position[1]+search_range+1, self.app.height)):
+                    p = (x, y)
+                    if p in searched:
+                        continue
+                    if self.app.passable(x, y):
+                        position = p
+                        found = True
+                        break
+                    searched.add(p)
+                    # print(searched)
+                if found:
+                    break
+            search_range += 1
+        # print("target position:", position)
         # position = position[0]  # eval(position[0].replace("[", "(").replace("]", ")"))
         path = self._navigate(cur_position, position)
-        self.app.log("navigate path: "+str(path))
+        #self.app.log("navigate path: "+str(path))
         if path:
             # remove start
             if path[0] == cur_position:
@@ -555,8 +728,9 @@ class Agent:
                 next_position = path[0]
                 if self.move_to(next_position[0], next_position[1]):
                     path.pop(0)
-                self.move_path = path
-                self.app.log("last path: "+str(self.move_path))
+            self.move_path = path
+            #self.app.log("last path: "+str(self.move_path))
+            self.navigate_to = location
                 # self.mud.send("Move", f"({next_position[0]},{next_position[1]})")
     
     def move(self, choice: str):

@@ -10,7 +10,7 @@ def set_block(bitmap, x1, y1, x2, y2):
 def is_block(obj):
     if 'properties' in obj:
         for prop in obj['properties']:
-            if prop['name'] == "Block" and prop['type'] == "bool" and prop['value'] is True:
+            if (prop['name'] == "Block" or prop['name'] == "block") and prop['type'] == "bool" and prop['value'] is True:
                 return True
     return False
 

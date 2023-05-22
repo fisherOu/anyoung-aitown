@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "DEBUG=mud:* vite",
     "build": "tsc && vite build",
+    "build:test": "tsc && vite build --mode test",
+    "build:live": "tsc && vite build --mode live",
     "test": "jest",
     "preview": "vite preview"
   },
@@ -25,6 +27,8 @@
     "async-mutex": "^0.4.0",
     "debug": "^4.3.4",
     "ethers": "^5.7.2",
+    "less": "^4.1.3",
+    "less-loader": "^11.1.0",
     "lodash": "^4.17.15",
     "mobx": "^6.7.0",
     "mobx-react-lite": "^3.4.0",

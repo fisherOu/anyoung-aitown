@@ -24,7 +24,9 @@
     "PromptComponent",
     "StatusComponent",
     "TimeAwareComponent",
-    "TransformComponent"
+    "TransformComponent",
+    "BroadcastComponent",
+    "CoinComponent"
   ],
   "initializers": ["MapConfigInitializer", "EquipmentTypeInitializer"],
   "systems": [
@@ -54,10 +56,14 @@
     },
     {
       "name": "AgentSystem",
-      "writeAccess": ["AgentComponent"]
+      "writeAccess": ["AgentComponent", "CoinComponent"]
     },
     {
       "name": "PromptSystem",
+      "writeAccess": ["PromptComponent"]
+    },
+    {
+      "name": "CancelPromptSystem",
       "writeAccess": ["PromptComponent"]
     },
     {
@@ -67,6 +73,21 @@
     {
       "name": "StatusSystem",
       "writeAccess": ["StatusComponent"]
+    },
+    {
+      "name": "PlanSystem",
+      "writeAccess": ["PlanComponent"]
+    },
+    {
+      "name": "BroadcastSystem",
+      "writeAccess": ["BroadcastComponent"]
+    },
+    {
+      "name": "CancelBroadcastSystem",
+      "writeAccess": ["BroadcastComponent"]
+    },{
+      "name": "TimeAwareSystem",
+      "writeAccess": ["TimeAwareComponent"]
     }
   ]
 }

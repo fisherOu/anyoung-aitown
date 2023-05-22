@@ -461,16 +461,20 @@
     nice-grpc-common "^2.0.0"
     protobufjs "^7.1.2"
 
-"@latticexyz/solecs@../libs/mud/packages/solecs":
+"@latticexyz/solecs@1.39.0":
   version "1.39.0"
+  resolved "https://registry.npmjs.org/@latticexyz/solecs/-/solecs-1.39.0.tgz#7ec86653cf4bce17499f7dcf896c765a1ea6abe4"
+  integrity sha512-MojEtWHAUV2jnARReTWU8MRbv/BnpaTQjdL7ljf/UIwOuS2C05E4k22yvzn3gk/798dLNUag/sDS/ulcWDD3Fg==
 
 "@latticexyz/solecs@^1.39.0":
   version "1.43.0"
   resolved "https://mirrors.cloud.tencent.com/npm/@latticexyz/solecs/-/solecs-1.43.0.tgz#d93e70045833c726498cc0c540021b5594ffd6a2"
   integrity sha512-6ZMMeKa13exwEInnRbHP9R7gRxxxo3HfAO+xdlPtvqQqnc9HUx2crG/6Tpo+i/LmhPEafC3m6QVrPz+py+AaOQ==
 
-"@latticexyz/std-contracts@../libs/mud/packages/std-contracts":
+"@latticexyz/std-contracts@1.39.0":
   version "1.39.0"
+  resolved "https://registry.npmjs.org/@latticexyz/std-contracts/-/std-contracts-1.39.0.tgz#9a5ccba9915887206d4d8274ee469b627c1e710c"
+  integrity sha512-jaP/WKleCma4x1fEu9RuYIuHHZEcRtrGorfz9JnSxvK6AN9SpreuLVwNIR84MTaUallgEDSemHfazGGqXltLiw==
 
 "@latticexyz/std-contracts@^1.39.0":
   version "1.43.0"
@@ -1082,13 +1086,13 @@ diff@^4.0.1:
   resolved "https://mirrors.cloud.tencent.com/npm/diff/-/diff-4.0.2.tgz#60f3aecb89d5fae520c11aa19efc2bb982aade7d"
   integrity sha512-58lmxKSA4BNyLz+HHMUzlOEpg09FV+ev6ZMe3vJihgdxzgcwZ8VoEEPmALCZG9LmqfVoNMMKpttIYTVG6uDY7A==
 
-"ds-test@git+https://github.com/dapphub/ds-test.git#c9ce3f25bde29fc5eb9901842bf02850dfd2d084":
-  version "1.0.0"
-  resolved "git+https://github.com/dapphub/ds-test.git#c9ce3f25bde29fc5eb9901842bf02850dfd2d084"
-
 "ds-test@https://github.com/dapphub/ds-test.git#c7a36fb236f298e04edf28e2fee385b80f53945f":
   version "0.0.0"
   resolved "https://github.com/dapphub/ds-test.git#c7a36fb236f298e04edf28e2fee385b80f53945f"
+
+"ds-test@https://github.com/dapphub/ds-test.git#c9ce3f25bde29fc5eb9901842bf02850dfd2d084":
+  version "1.0.0"
+  resolved "https://github.com/dapphub/ds-test.git#c9ce3f25bde29fc5eb9901842bf02850dfd2d084"
 
 ejs@^3.1.8:
   version "3.1.9"
@@ -1273,10 +1277,6 @@ follow-redirects@^1.14.7:
   version "1.15.2"
   resolved "https://mirrors.cloud.tencent.com/npm/follow-redirects/-/follow-redirects-1.15.2.tgz#b460864144ba63f2681096f274c4e57026da2c13"
   integrity sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==
-
-"forge-std@git+https://github.com/foundry-rs/forge-std.git#b4f121555729b3afb3c5ffccb62ff4b6e2818fd3":
-  version "1.2.0"
-  resolved "git+https://github.com/foundry-rs/forge-std.git#b4f121555729b3afb3c5ffccb62ff4b6e2818fd3"
 
 "forge-std@https://github.com/foundry-rs/forge-std.git#b4f121555729b3afb3c5ffccb62ff4b6e2818fd3":
   version "1.2.0"
@@ -2253,9 +2253,9 @@ solidity-comments-extractor@^0.0.7:
   resolved "https://mirrors.cloud.tencent.com/npm/solidity-comments-extractor/-/solidity-comments-extractor-0.0.7.tgz#99d8f1361438f84019795d928b931f4e5c39ca19"
   integrity sha512-wciNMLg/Irp8OKGrh3S2tfvZiZ0NEyILfcRCXCD4mp7SgK/i9gzLfhY2hY7VMCQJ3kH9UB9BzNdibIVMchzyYw==
 
-"solmate@git+https://github.com/Rari-Capital/solmate.git#9cf1428245074e39090dceacb0c28b1f684f584c":
+"solmate@https://github.com/Rari-Capital/solmate.git#9cf1428245074e39090dceacb0c28b1f684f584c":
   version "6.5.0"
-  resolved "git+https://github.com/Rari-Capital/solmate.git#9cf1428245074e39090dceacb0c28b1f684f584c"
+  resolved "https://github.com/Rari-Capital/solmate.git#9cf1428245074e39090dceacb0c28b1f684f584c"
 
 source-map@^0.6.1:
   version "0.6.1"

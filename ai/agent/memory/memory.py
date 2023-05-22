@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Any
 
 from sentence_transformers import SentenceTransformer, util
 # from torch import Tensor
@@ -58,8 +58,8 @@ class Memory:
         relevance = params['relevance_weight'] * self.relevance(other_memory)
         return recency + importance + relevance
 
-    def to_json(self) -> Dict[str, object]:
-        return {
+    def to_json(self) -> Dict[str, Any]:
+        ret_json = {
             'content': self.content,
             'importance': self.importance,
             'location': self.location,
@@ -67,7 +67,24 @@ class Memory:
             'created': self.created,
             'last_access': self.last_access,
             'memory_type': self.memory_type,
+            'destoryed': self.destoryed
         }
+        ret_json["memory_type"]
+        if self.id:
+            ret_json['id'] = self.id
+        return ret_json
+    
+    def from_json(self, json_obj: Dict[str, Any]):
+        if json_obj:
+            self.content = json_obj['content']
+            self.vector = model.encode(self.content)
+            self.id = json_obj.get("id")
+            self.importance = json_obj.get("importance")
+            self.location = json_obj.get("location")
+            self.related_person = json_obj.get("related_person")
+            self.created = json_obj.get("created")
+            self.last_access = json_obj.get("last_access")
+            self.destoryed = json_obj.get("destoryed")
 
 class Observation(Memory):
     def __init__(self, content: str, importance: int, location: str, related_person: List[str], time_tick: int):
@@ -80,6 +97,16 @@ class Plan(Memory):
 
     def mark_completed(self):
         self.completed = True
+    
+    def to_json(self) -> Dict[str, Any]:
+        ret_json = super().to_json()
+        ret_json['completed'] = self.completed
+        return ret_json
+    
+    def from_json(self, json_obj: Dict[str, Any]):
+        if json_obj:
+            super().from_json(json_obj)
+            self.completed = json_obj.get('completed')
 
 class Reflection(Memory):
     def __init__(self, content: str, importance: int, related_memory: Memory, location: str, related_person: List[str], time_tick: int):
@@ -89,3 +116,9 @@ class Reflection(Memory):
 class Background(Memory):
     def __init__(self, content: str, importance: int, location: str, related_person: List[str], time_tick: int):
         super().__init__(content, importance, location, related_person, BACKGROUND, time_tick)
+
+def empty_memory() -> Memory:
+    return Memory("", 0, "", [], 0, 0)
+
+def empty_plan() -> Plan:
+    return Plan("", 0, "", [], 0)

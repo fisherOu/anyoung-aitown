@@ -8,7 +8,7 @@ import { LibMap } from "libraries/LibMap.sol";
 uint256 constant ID = uint256(keccak256("system.Prompt"));
 
 struct PromptDetail {
-    uint256 entityId;
+    uint256 targetId;
     string detail;
 }
 
@@ -25,8 +25,8 @@ contract PromptSystem is System {
 
     // TODO: can only send prompt to owner's agent
     // TODO: time limit
-    Prompt memory prompt = Prompt(promptdetail.detail, promptdetail.entityId);
-    PromptComponent(getAddressById(components, PromptComponentID)).set(promptdetail.entityId, prompt);
+    Prompt memory prompt = Prompt(promptdetail.detail, promptdetail.targetId);
+    PromptComponent(getAddressById(components, PromptComponentID)).set(promptdetail.targetId, prompt);
     return new bytes(0);
   }
 }

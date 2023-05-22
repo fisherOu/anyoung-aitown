@@ -7,4 +7,5 @@ class GPTCaller(object):
 
     def call(self, system: str, user: str, model: str) -> str:
         url = f"http://{self.config.gpt_host}:{self.config.gpt_port}/api/{model}"
-        return requests.post(url, json={"system": system, "user": user}).json()
+        response = requests.post(url, json={"system": system, "user": user}).json()
+        return response

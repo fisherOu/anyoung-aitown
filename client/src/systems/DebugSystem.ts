@@ -1,4 +1,5 @@
-// PlayerSystem.ts
+// DebugSystem.ts
+
 import * as PIXI from 'pixi.js';
 import { ethers } from "ethers";
 import {

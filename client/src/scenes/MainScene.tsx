@@ -15,7 +15,9 @@ import { setup as setupMoveSystem } from "../systems/MoveSystem"
 import { setup as setupAgentAnimationSystem } from "../systems/AgentAnimationSystem";
 import { setup as setupPlayerSystem } from "../systems/PlayerSystem";
 import { setup as setupStatusSystem } from "../systems/StatusSystem";
+import { setup as setupInteractionSystem } from "../systems/InteractionSystem";
 import { setup as setupDebugSystem } from "../systems/DebugSystem";
+import { setup as setupFollowUpSystem } from "../systems/FollowUpSystem";
 
 const showLoading = (app: PIXI.Application):PIXI.DisplayObject=>{
   const loadingText = new PIXI.Text('Map loading...', {
@@ -37,13 +39,13 @@ const loadMap = async (ctx: SetupResult, app: PIXI.Application): Promise<[Viewpo
     let loader = new TiledLoader();
 
     // Adjust the path to your actual map file and its assets
-    let layer = await loader.load(`${ctx.publicURL}/assets/map2/Expanded-game-map_1.1_0519.json`)
+    let layer = await loader.load(`${ctx.publicURL}/assets/map2/Expanded-game-map_1.4_0520.json`)
 
     console.log("layer width:", layer.width, "height:", layer.height);
 
     const viewport = new Viewport({
-      screenWidth: window.innerWidth,
-      screenHeight: window.innerHeight,
+      screenWidth: app.view.width,
+      screenHeight: app.view.height,
       worldWidth: layer.width, // Set to your map dimensions
       worldHeight: layer.height,
       events: app.renderer.events,
@@ -57,7 +59,6 @@ const loadMap = async (ctx: SetupResult, app: PIXI.Application): Promise<[Viewpo
       .decelerate()
 
     // center map
-    viewport.zoomPercent(0.001)
     viewport.moveCenter(layer.width/2, layer.height/2);
     
     viewport.addChild(layer);
@@ -70,7 +71,7 @@ const loadMap = async (ctx: SetupResult, app: PIXI.Application): Promise<[Viewpo
     return [viewport, layer]
 }
 
-const setupGame = async (ctx: SetupResult, app: PIXI.Application):Promise<void>=> {
+const setupGame = async (ctx: SetupResult, app: PIXI.Application, ready: (world: World)=>void):Promise<void>=> {
   let loading = showLoading(app)
 
   try {
@@ -83,16 +84,26 @@ const setupGame = async (ctx: SetupResult, app: PIXI.Application):Promise<void>=
     await setupPlayerSystem(ctx, world)
     await setupAgentAnimationSystem(ctx, world)
     await setupStatusSystem(ctx, world)
+    await setupInteractionSystem(ctx, world)
+    await setupFollowUpSystem(ctx, world)
 
     if (config.devMode) {
       await setupDebugSystem(ctx, world)
+    }
+
+    if (ready) {
+      ready(world)
     }
   } finally {
     loading.removeFromParent()
   }
 }
 
-const MainScene = () => {
+interface MainSceneProps {
+  ready: (world: World)=>void
+}
+
+const MainScene = ({ready}:MainSceneProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctx = useMUD();
 
@@ -115,8 +126,8 @@ const MainScene = () => {
 
     app.start();
 
-    setupGame(ctx, app)
-    
+    setupGame(ctx, app, ready)
+
     return () => {
       app.destroy(true);
     };

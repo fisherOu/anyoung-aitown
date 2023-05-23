@@ -113,6 +113,11 @@
                 "name": "sell coffee",
                 "distance": 1,
                 "owner": true
+            },
+            {
+                "name": "check inventory",
+                "distance": 1,
+                "owner": true
             }
         ]
     },
@@ -155,6 +160,11 @@
                 "name": "sell wine",
                 "distance": 1,
                 "owner": true
+            },
+            {
+                "name": "check inventory",
+                "distance": 1,
+                "owner": true
             }
         ]
     },
@@ -193,21 +203,41 @@
     },
     {
         "name": "Artwork",
-        "description": "You can enjoy artwork with a Artwork.",
+        "description": "You can enjoy artwork or write music or poem or novel or rap music with a Artwork.",
         "operations": [
             {
                 "name": "enjoy artwork",
+                "distance": 1,
+                "owner": false
+            },
+            {
+                "name": "write music",
+                "distance": 1,
+                "owner": false
+            },
+            {
+                "name": "write poem",
+                "distance": 1,
+                "owner": false
+            },
+            {
+                "name": "write novel",
+                "distance": 1,
+                "owner": false
+            },
+            {
+                "name": "write rap music",
                 "distance": 1,
                 "owner": false
             }
         ]
     },
     {
-        "name": "Create Point",
-        "description": "You can do some creative writing with a Create Point.",
+        "name": "Gambling table",
+        "description": "You can gamble with a Gambling table.",
         "operations": [
             {
-                "name": "do some creative writing",
+                "name": "gamble",
                 "distance": 1,
                 "owner": false
             }

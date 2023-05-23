@@ -3,7 +3,7 @@
 # 镜像名称
 IMAGE_REGISTRY := jpccr.ccs.tencentyun.com
 IMAGE_GROUP := llm-town
-VERSION := 0.1.10
+VERSION := 0.1.13
 
 # 构建 Docker 镜像
 build-contracts:

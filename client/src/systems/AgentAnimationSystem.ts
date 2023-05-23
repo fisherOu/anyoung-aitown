@@ -110,8 +110,24 @@ export async function setup(ctx: SetupResult, world: World) {
 
       let old = entity.getChildByName(CompomentName)
       if (old) {
-        old.removeFromParent()
+        old.removeAllListeners();
+        old.removeFromParent();
       }
+
+      animation.zIndex = 100;
+      animation.interactive = true;
+      animation.cursor = "pointer";
+      
+      animation.on('pointerdown', (e: any) => {
+        console.log("agent animation pointerdown:", e)
+
+        world.emit("agent_click", {
+          targetEntity: update.entity,
+          agent: agent,
+          position: position,
+          rawEvent: e,
+        })
+      });
 
       entity.addChild(animation);
     }

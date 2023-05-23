@@ -172,6 +172,10 @@ class App:
                 if t in self.equipment_config:
                     self.equipments[entity]['config'] = self.get_equipment_config(t)
             if "Position" in info:
+                if "ItemMetadata" in info:
+                    n, t, f = info["ItemMetadata"]
+                    if t not in self.equipment_config:
+                        continue
                 x, y = info["Position"][0]
                 if x not in self.position:
                     self.position[x] = dict()

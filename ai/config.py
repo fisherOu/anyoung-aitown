@@ -100,11 +100,8 @@ class AgentConfig:
         self.id = self.agent_properties["name"]
         self.plan_prompt = get_json_value(
             obj, "plan_prompt", """
-Your sight is:```
+You can perceive something nearyby, they are:```
 {target_content}
-```
-Your most relevant memories are:```
-{memory}
 ```
 Your last plan is:```
 {plan}
@@ -133,17 +130,13 @@ The buildings you can go to are given in JSON format:
             obj, "reflect_model", "gpt-3.5-turbo")
         self.act_prompt = get_json_value(
             obj, "act_prompt", """
-Your sight is:```
+You can perceive something nearyby, they are:```
 {target_content}
-```
-Your most relevant memories are:```
-{memory}
 ```
 Your plan is:```
 {plan}
 ```
-Your action is a choose to achieve your plan, which can be decomposed as a single step in the actual situation.  A single step is not necessary to achieve the whole plan.
-Your operation should be chosen from available operation list. If you choose "go to your chosen buildings", you should choose a building on the map additionally. If you choose "talk with nearby people", you should choose a person nearby from Nearby people list additionally. If you choose other operation, you shoold choose an equipment and set a duration additionally.
+Now please think aboud what action do you want to choose based on your plan, you don't need to tell me. Then, you should tell me the most relevant operation with what you want to do from "available operation list". If you choose "go to your chosen buildings", you should choose a building on the map additionally.  If you are already in the place you want to go to, you just need to choose what equipment you want to do operation. If you choose "talk with nearby people", you should choose a person nearby from "Nearby people list" additionally. If you choose other operation, you shoold choose an equipment and set a duration additionally.
 Available operation list is:```
 {operations}
 ```
@@ -168,7 +161,7 @@ Your personality is :
 }```
 Based on your personality, your daily behavior also needs to conform to the worldview of the game. Of course, different personalities are allowed to have different understandings of the worldview. The worldview of the game is as follows:
 ```{
-Have a daily routine like a real human.You will work, rest, eat, sleep, communicate with people, and leisure at reasonable times that match your own professional characteristics and personality traits. Even if you have an appointment with others, remember to travel. Once big things happen, you can do some creative writing in Art plaza that match your introduction.
+Have a daily routine like a real human.You will work, rest, eat, sleep, communicate with people, and leisure at reasonable times that match your own professional characteristics and personality traits. Even if you have an appointment with others, remember to travel. Once received a message from the broadcast, you must plan to write music or poem or novel or rap music in Art plaza that match your introduction.
 }```
 You have also been provided with a biography to introduce your identity, profession, and social relationships. This will serve as your basic introduction and cannot be changed. It is:
 ```{
@@ -185,7 +178,7 @@ You have also been provided with a biography to introduce your identity, profess
             obj, "background_importance", 3
         )
         self.importance_prompt = get_json_value(
-            obj, "importance_prompt", "Your memory is {memory}. Your {source} is {content}. How would you evaluate this {source} between 1 to 5, 1 is the least important?Reply with only one number.")
+            obj, "importance_prompt", "Your {source} is {content}. How would you evaluate this {source} between 1 to 5, 1 is the least important?Reply with only one number.")
         self.importance_model = get_json_value(
             obj, "importance_model", "gpt-3.5-turbo")
         self.prompt_replaces = get_json_value(
@@ -198,8 +191,18 @@ You have also been provided with a biography to introduce your identity, profess
             "relevance_weight": get_json_value(obj, "relevance_weight", 0.6),
         }
 
+        self.writing_prompt = """
+You can perceive something nearyby, they are:```
+{target_content}
+```
+Your plan is:```
+{plan}
+```
+Now you are at creating point, you can write something. Based on your plan and memory and your personality and what you perceive, you need to choose a topic and a style to write. Now what topic do you want to choose? What style do you want to choose? You want to write a poem, a music, a rap music or a novel? You don't need to answer me the above questions, just write what you want to write. 
+"""
+
         self.sight = get_json_value(
-            obj, "sight", 5)
+            obj, "sight", 15)
         self.init_coin = get_json_value(
             obj, "init_coin", 100)
         # self.terrain_prompt = get_json_value(

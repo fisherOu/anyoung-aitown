@@ -12,12 +12,12 @@ class Tick(CommandBase):
         # if name not in self.app.agents:
         #     return self.error('invalid name')
         # agent = self.app.agents[name]
-        self.app.flush_events()
-        try:
-            for agent in self.app.agents.values():
-                agent.save()
-        except Exception:
-            pass
+        # self.app.flush_events()
+        # try:
+        #     for agent in self.app.agents.values():
+        #         agent.save()
+        # except Exception:
+        #     pass
         self.app.time_tick += 1
         self.app.save_time_tick()
         self.app.mud.send("TimeAware", f'{self.app.get_time_tick()}')

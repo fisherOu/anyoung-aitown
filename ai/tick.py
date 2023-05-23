@@ -7,7 +7,7 @@ import datetime
 from threading import Thread
 
 def handle_agent(agent_name: str):
-    for i in range(200):
+    for i in range(100):
         data = {
             "name": agent_name
         }
@@ -18,7 +18,7 @@ def handle_agent(agent_name: str):
             print(str(datetime.datetime.now()), "name:", agent_name, response.json(), "spend time:", time.time() - start)
         except:
             pass
-        if time.time() - start_time > 60 * 30:
+        if time.time() - start_time > 60 * 3:
             break
     print(str(datetime.datetime.now()), "name:", agent_name, f"{i} rounds done", "spend time:", time.time() - start)
 
@@ -38,13 +38,14 @@ for obj in objs:
     # self.agent_config[config.id] = config
     names.append(cfg.id)
 print(names)
-agent_name = "John Lin"
-for agent_name in names:
-    t = Thread(target=handle_agent, args=(agent_name,))
-    t.start()
+agent_name = "Tamara Taylor"
+# names = ["Eddy Lin", "Yuriko Yamamoto"]
+# for agent_name in names:
+t = Thread(target=handle_agent, args=(agent_name,))
+t.start()
 for _ in range(1000):
     response = requests.post(f"http://{host}:{config.agent_port}/api/mud.Tick", json={})
     print("tick:", response.json())
-    if time.time() - start_time > 30 * 61:
+    if time.time() - start_time > 3 * 61:
         break
-    time.sleep(3)
+    time.sleep(15)

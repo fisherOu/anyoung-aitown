@@ -49,7 +49,7 @@ export async function setup(ctx: SetupResult, world: World) {
     return background;
   }
 
-  const createChat = (name: string, textContent: string)=>{
+  const createStatus = (name: string, textContent: string)=>{
     const billboard = new PIXI.Container();
 
     const nameStyle = new PIXI.TextStyle({
@@ -89,17 +89,34 @@ export async function setup(ctx: SetupResult, world: World) {
     const agent = getComponentValue(Agent, update.entity);
 
     if (agent && position && status) {
-      let chatTips = createChat(agent.name, status.value)
-      chatTips.name = StatusComponentName
-      chatTips.x = -chatTips.width/2;
-      chatTips.y = -chatTips.height-16;
+      let statusTips = createStatus(agent.name, status.value)
+      statusTips.name = StatusComponentName
+      statusTips.x = -statusTips.width/2;
+      statusTips.y = -statusTips.height-16;
 
-      let oldChat = entity.getChildByName(StatusComponentName)
-      if (oldChat) {
-        oldChat.removeFromParent()
+      let oldStatus = entity.getChildByName(StatusComponentName)
+      if (oldStatus) {
+        oldStatus.removeAllListeners();
+        oldStatus.removeFromParent()
       }
 
-      entity.addChild(chatTips);
+      statusTips.zIndex = 100;
+      statusTips.interactive = true;
+      statusTips.cursor = "pointer";
+
+      statusTips.on('pointerdown', (e: any) => {
+        console.log("statusTips pointerdown:", e)
+
+        world.emit("status_click", {
+          targetEntity: update.entity,
+          agent: agent,
+          position: position,
+          status: status,
+          rawEvent: e,
+        })
+      });
+
+      entity.addChild(statusTips);
     }
   });
 }

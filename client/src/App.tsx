@@ -2,20 +2,51 @@ import { SyncState } from "@latticexyz/network";
 import { useComponentValue } from "@latticexyz/react";
 import { useMUD } from "./MUDContext";
 import MainScene from "./scenes/MainScene";
+import { World } from "./world/World";
 
 import styles from './App.module.less'
+import { useState } from "react";
+import { WorldDetails } from "./WorldDetails";
+
+function timestampToDate(timestampInSeconds: number): Date {
+  const timestampInMilliseconds = timestampInSeconds * 1000;
+  const date = new Date(timestampInMilliseconds);
+  return date;
+}
+
+function formatDate(date: Date): string {
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const seconds = date.getSeconds();
+  const amPm = hours >= 12 ? 'PM' : 'AM';
+
+  const formattedDate = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year} ${((hours + 11) % 12) + 1}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} ${amPm}`;
+
+  return formattedDate;
+}
 
 export const App = () => {
   const {
-    components: { LoadingState },
+    components: { LoadingState, TimeAware },
     singletonEntity,
   } = useMUD();
+
+  const [world, setWorld] = useState<World|undefined>(undefined);
 
   const loadingState = useComponentValue(LoadingState, singletonEntity, {
     state: SyncState.CONNECTING,
     msg: "Connecting",
     percentage: 0,
   });
+
+  const currentTime = useComponentValue(TimeAware, singletonEntity);
+
+  const readyFunc = (world: World)=>{
+    setWorld(world)
+  }
 
   return (
     <div className={styles.container}>
@@ -32,7 +63,12 @@ export const App = () => {
               <span>@anyoung_AItown</span>
             </div>
             <div className={styles.head2_right}>
-              Current time: 19/05/2023 7:50:00 AM
+              {
+                currentTime ? (
+                  "Current time: " + formatDate(timestampToDate(currentTime.value))
+                ):
+                "Current time: No Time"
+              }
             </div>
           </div>
         </div>
@@ -42,12 +78,12 @@ export const App = () => {
               <div className={styles.text}>{loadingState.msg} ({Math.floor(loadingState.percentage)}%)</div>
             </div>
           ) : (
-            <MainScene />
+            <MainScene ready={readyFunc}/>
           )}
         </div>
       </div>
       <div className={styles.right}>
-        <p></p>
+        <WorldDetails world={world}></WorldDetails>
       </div>
     </div>
   );

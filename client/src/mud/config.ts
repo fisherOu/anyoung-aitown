@@ -3,7 +3,7 @@ import { getBurnerWallet } from "./getBurnerWallet";
 
 const params = new URLSearchParams(window.location.search);
 
-export const config: SetupContractConfig & { faucetServiceUrl?: string } = {
+export const config: SetupContractConfig & { faucetServiceUrl?: string, aiServiceUrl?: string } = {
   clock: {
     period: 1000,
     initialTime: 0,
@@ -21,4 +21,5 @@ export const config: SetupContractConfig & { faucetServiceUrl?: string } = {
   initialBlockNumber: Number(params.get("initialBlockNumber")) || 0,
   worldAddress: params.get("worldAddress")!,
   devMode: params.get("dev") === "true",
+  aiServiceUrl: params.get("ai") ?? "http://localhost:9802",
 };

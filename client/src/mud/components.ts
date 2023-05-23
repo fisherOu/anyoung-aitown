@@ -105,6 +105,11 @@ export const contractComponents = {
       contractId: "component.Status",
     },
   }),
+  Plan: defineStringComponent(world, {
+    metadata: {
+      contractId: "component.Plan",
+    },
+  }),
   Chat: defineComponent(
     world,
     {
@@ -116,6 +121,11 @@ export const contractComponents = {
       metadata: { contractId: "component.Chat" },
     }
   ),
+  TimeAware: defineNumberComponent(world, {
+    metadata: {
+      contractId: "component.TimeAware",
+    },
+  })
 };
 
 export const clientComponents = {
@@ -125,5 +135,12 @@ export const clientComponents = {
   Animation: defineAnimationComponent(world),
   State: defineStateComponent(world),
   Movement: defineMovementComponent(world),
-  LocalPosition: defineLocalPositionComponent(world)
+  LocalPosition: defineLocalPositionComponent(world),
+  Selected: defineComponent(world, { 
+    value: Type.Boolean,
+  }),
+  OutlineEffect: defineComponent(world, { 
+    speed: Type.Number,
+    scaleFactor: Type.Number
+  }),
 };

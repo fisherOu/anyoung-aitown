@@ -23,17 +23,17 @@ export async function setup(ctx: SetupResult, world: World) {
   const canJoinGame = getComponentValue(Player, playerEntity)?.value !== true;
 
   // new player
-  world.MapLayer.on("click", (e: any)=>{
-    if (e.type == "tile_click") {
+  if (canJoinGame) {
+    world.on("tile_click", (e: any)=>{
       console.log("tile click:", e)
-
+  
       if (canJoinGame) {
         joinGame(e.tile_x, e.tile_y)
       } else {
         console.log("Already joined!")
       }
-    }
-  })
+    })
+  }
 
   // current player
   if (!canJoinGame && playerPosition) {
@@ -47,7 +47,11 @@ export async function setup(ctx: SetupResult, world: World) {
       model: "Baby"
     })
     
-    world.Viewport.moveCenter(playerPosition.x*world.TileWidth, playerPosition.y*world.TileHeight)
+    let playerWorldPos = {
+      x: world.EntityLayer.x + playerPosition.x*world.TileWidth + world.TileWidth/2,
+      y: world.EntityLayer.y + playerPosition.y*world.TileHeight + world.TileHeight/2,
+    }
+    world.Viewport.moveCenter(playerWorldPos)
   }
 
   // others players

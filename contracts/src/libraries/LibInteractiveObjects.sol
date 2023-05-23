@@ -11,7 +11,7 @@ library LibInteractiveObjects {
     }
 
     function getAllInteractiveObjects() internal pure returns (InteractiveObject[] memory) {
-        InteractiveObject[] memory allInteractiveObjects = new InteractiveObject[](89);
+        InteractiveObject[] memory allInteractiveObjects = new InteractiveObject[](111);
         allInteractiveObjects[0] = InteractiveObject('Desk', 110, 45, 3, 4);
         allInteractiveObjects[1] = InteractiveObject('Desk', 116, 45, 2, 2);
         allInteractiveObjects[2] = InteractiveObject('Gambling table', 80, 20, 6, 3);
@@ -21,7 +21,7 @@ library LibInteractiveObjects {
         allInteractiveObjects[6] = InteractiveObject('Gambling table', 72, 29, 6, 3);
         allInteractiveObjects[7] = InteractiveObject('Gambling table', 75, 24, 6, 3);
         allInteractiveObjects[8] = InteractiveObject('Artwork', 125, 44, 5, 2);
-        allInteractiveObjects[9] = InteractiveObject('Artwork', 131, 44, 4, 5);
+        allInteractiveObjects[9] = InteractiveObject('Workshop', 131, 44, 4, 5);
         allInteractiveObjects[10] = InteractiveObject('Television', 131, 72, 2, 1);
         allInteractiveObjects[11] = InteractiveObject('Table', 124, 69, 3, 2);
         allInteractiveObjects[12] = InteractiveObject('Table', 126, 80, 3, 1);
@@ -101,6 +101,28 @@ library LibInteractiveObjects {
         allInteractiveObjects[86] = InteractiveObject('Bar table', 88, 44, 4, 2);
         allInteractiveObjects[87] = InteractiveObject('Dance floor', 84, 37, 3, 8);
         allInteractiveObjects[88] = InteractiveObject('Goal', 68, 88, 4, 1);
+        allInteractiveObjects[89] = InteractiveObject('Bookshelf', 116, 82, 2, 1);
+        allInteractiveObjects[90] = InteractiveObject('Entrance', 51, 80, 1, 1);
+        allInteractiveObjects[91] = InteractiveObject('Entrance', 51, 61, 1, 1);
+        allInteractiveObjects[92] = InteractiveObject('Entrance', 57, 61, 1, 1);
+        allInteractiveObjects[93] = InteractiveObject('Entrance', 57, 81, 1, 1);
+        allInteractiveObjects[94] = InteractiveObject('Entrance', 79, 64, 1, 1);
+        allInteractiveObjects[95] = InteractiveObject('Entrance', 84, 66, 2, 1);
+        allInteractiveObjects[96] = InteractiveObject('Entrance', 99, 66, 2, 1);
+        allInteractiveObjects[97] = InteractiveObject('Entrance', 100, 90, 2, 1);
+        allInteractiveObjects[98] = InteractiveObject('Entrance', 128, 66, 2, 1);
+        allInteractiveObjects[99] = InteractiveObject('Entrance', 123, 52, 2, 1);
+        allInteractiveObjects[100] = InteractiveObject('Entrance', 137, 40, 1, 4);
+        allInteractiveObjects[101] = InteractiveObject('Entrance', 108, 40, 1, 4);
+        allInteractiveObjects[102] = InteractiveObject('Entrance', 121, 47, 1, 2);
+        allInteractiveObjects[103] = InteractiveObject('Entrance', 124, 47, 1, 2);
+        allInteractiveObjects[104] = InteractiveObject('Entrance', 137, 22, 1, 4);
+        allInteractiveObjects[105] = InteractiveObject('Entrance', 108, 22, 1, 4);
+        allInteractiveObjects[106] = InteractiveObject('Entrance', 95, 22, 1, 1);
+        allInteractiveObjects[107] = InteractiveObject('Entrance', 96, 43, 1, 1);
+        allInteractiveObjects[108] = InteractiveObject('Entrance', 71, 43, 1, 1);
+        allInteractiveObjects[109] = InteractiveObject('Entrance', 72, 22, 1, 1);
+        allInteractiveObjects[110] = InteractiveObject('Entrance', 54, 34, 2, 1);
         return allInteractiveObjects;
     }
 }

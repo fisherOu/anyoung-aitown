@@ -345,7 +345,7 @@ class MUDConnector(object):
 
 if __name__ == "__main__":
     cfg = Config(os.path.join(abs_path, "..", "config", "app.json"))
-    pk = "0x9a450fb151537a6385a56cd5d24dac705ce7aa7bf59da854633ac0c1588a0fa1"
+    pk = "0x9c311d32cd0485f9f4acbc38a70a0b092f6eb111be3ee9a2c7f1cb5bc94002b5"
     # print(new_account())
     # print(new_account())
     # print(new_account())
@@ -368,8 +368,10 @@ if __name__ == "__main__":
     #     print(config.id, config.name, config.passable)
 
     mud = MUDConnector(pk, cfg)
-    mud.send("Move", '(121,91)')
+    # mud.send("Broadcast", '"An earthquake happened"')
+    # mud.send("Move", '(121,91)')
     # position = mud.getValue("Position", f'"{mud.player}"')
+    # print(position)
     # locations = list()
     # with open(r"D:\WorkSpace\ShareWithUbuntu2204\llm-town\ai\config\location.json", "r", encoding="utf-8") as agent_file:
     #     locations = json.loads(agent_file.read())
@@ -492,71 +494,99 @@ if __name__ == "__main__":
     #         positions[x][y] = entity
     # print("entities:", entities)
     # print("positions:", positions)
+    # actions = mud.get_events()
     # for action in actions:
     #     # print(action)
-    #     if action["component_name"] == "component.MapConfig":
+    #     if action["component_name"] == "component.Broadcast":
     #         # print(mud.parse_data(["string", "string", "string"], action["data"]))
     #         print(action)
     # print(actions)
     # print(len(actions))
     # print(mud.getValue("MapConfig", ""))
-    # print(terrain_config)
-    # map = mud.get_map()
+    # # print(terrain_config)
+    map = mud.get_map()
     # print(map)
-    # def in_bounds( x, y):
-    #     return 0 <= x < 160 and 0 <= y < 96
+    def in_bounds( x, y):
+        return 0 <= x < 160 and 0 <= y < 96
     
-    # def passable( x, y):
-    #     # print(x, y, map[x][y], terrain_config[map[x][y]].id, terrain_config.passable)
-    #     # return terrain_config[map[x][y]].passable
-    #     return map[x][y] == 0
+    def passable( x, y):
+        # print(x, y, map[x][y], terrain_config[map[x][y]].id, terrain_config.passable)
+        # return terrain_config[map[x][y]].passable
+        return map[x][y] == 0
     
-    # def neighbors( x, y):
-    #     results = []
-    #     # 上
-    #     if in_bounds(x - 1, y) and passable(x - 1, y):
-    #         results.append((x - 1, y))
-    #     # 下
-    #     if in_bounds(x + 1, y) and passable(x + 1, y):
-    #         results.append((x + 1, y))
-    #     # 左
-    #     if in_bounds(x, y - 1) and passable(x, y - 1):
-    #         results.append((x, y - 1))
-    #     # 右  
-    #     if in_bounds(x, y + 1) and passable(x, y + 1):
-    #         results.append((x, y + 1))
-    #     return results
-    # def navigate(start, end):
-    #     # 广度优先搜索
-    #     queue = [start]
-    #     path = {start: None}
-    #     while queue:
-    #         # print(queue)
-    #         # 移除队首节点并获取相邻节点
-    #         row, col = queue.pop(0)
-    #         if (row, col) == end:
-    #             break
-    #         for neighbor in neighbors(row, col):
-    #             # 如果节点未在路径中,添加到队尾并添加到路径
-    #             if neighbor not in path:
-    #                 queue.append(neighbor)
-    #                 path[neighbor] = (row, col)
-    #     # 重构路径
-    #     route = [end]
-    #     while end != start:
-    #         row, col = path.get(end, (None, None))
-    #         if row is None:
-    #             break
-    #         route.append((row, col))
-    #         end = (row, col)
-    #     # 逆序打印路径
-    #     route.reverse()
-    #     return route
-    # print(mud.getValue("Position", ))
-    # print("John Lin's path:", navigate((28, 58), (110, 88)))
-    # print("Yuriko Yamamoto's path:", navigate((79, 91), (110, 88)))
-    # print("Sam Moore's path:", navigate((26, 88), (110, 88)))
-    # print("Tamara Taylor's path:", navigate((123, 91), (110, 88)))
+    def findFinal(position):
+        # search a passable point around position
+        found = False
+        position = tuple(position)
+        search_range = 0
+        searched = set()
+        while not found or search_range < 10:
+            for x in range(max(position[0]-search_range, 0), min(position[0]+search_range+1, 160)):
+                for y in range(max(position[1]-search_range, 0), min(position[1]+search_range+1, 96)):
+                    p = (x, y)
+                    if p in searched:
+                        continue
+                    if passable(x, y):
+                        position = p
+                        found = True
+                        break
+                    searched.add(p)
+                    # print(searched)
+                if found:
+                    break
+            if found:
+                break
+            search_range += 1
+        return position
+    
+    def neighbors( x, y):
+        results = []
+        # 上
+        if in_bounds(x - 1, y) and passable(x - 1, y):
+            results.append((x - 1, y))
+        # 下
+        if in_bounds(x + 1, y) and passable(x + 1, y):
+            results.append((x + 1, y))
+        # 左
+        if in_bounds(x, y - 1) and passable(x, y - 1):
+            results.append((x, y - 1))
+        # 右  
+        if in_bounds(x, y + 1) and passable(x, y + 1):
+            results.append((x, y + 1))
+        return results
+    def navigate(start, end):
+        # 广度优先搜索
+        queue = [start]
+        path = {start: None}
+        while queue:
+            # print(queue)
+            # 移除队首节点并获取相邻节点
+            row, col = queue.pop(0)
+            if (row, col) == end:
+                break
+            for neighbor in neighbors(row, col):
+                # 如果节点未在路径中,添加到队尾并添加到路径
+                if neighbor not in path:
+                    queue.append(neighbor)
+                    path[neighbor] = (row, col)
+        # 重构路径
+        route = [end]
+        while end != start:
+            row, col = path.get(end, (None, None))
+            if row is None:
+                break
+            route.append((row, col))
+            end = (row, col)
+        # 逆序打印路径
+        route.reverse()
+        return route
+    # # print(mud.getValue("Position", ))
+    # print("John Lin's path:", navigate((28, 58), findFinal([53,34])))
+    # print("Yuriko Yamamoto's path:", navigate((79, 91), findFinal([53,34])))
+    # print("Jennifer Moore's path:", navigate(mud.getValue("Position", f'{mud.player}'), findFinal([49,79])))
+    for p in navigate(mud.getValue("Position", f'{mud.player}'), findFinal([124,47])):
+        mud.send("Move", f'({p[0]},{p[1]})')
+    # print("Tamara Taylor's path:", navigate((123, 91), findFinal([53,34])))
     # print(new_account())
     # print(new_account())
     # print(new_account())

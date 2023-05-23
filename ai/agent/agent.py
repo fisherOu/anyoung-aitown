@@ -54,6 +54,7 @@ class Agent:
         self.last_big_event = ""
         self.writing = ""
         self.writing_prompt = ""
+        self.writings = list()
         self.languages = list()
         # TODO: record last sight & save observation only when new equip or agent in sight
         self.last_sight = set()
@@ -70,28 +71,28 @@ class Agent:
         operations = list()
         sight = dict()
         if not observation:
-            sight = self._get_sight(time_tick)
+            sight = self.get_sight(time_tick)
             observation = sight["observation"]
             operations = sight["operations"]
             entities = sight["entities"]
             chats = sight["chats"]
-            finishes = sight["finishes"]
-            broadcast = sight["broadcast"]
+            # finishes = sight["finishes"]
+            # broadcast = sight["broadcast"]
             # operation_dict = sight["operation_dict"]
             self.app.log("sight: "+str(sight))
-            found = False
-            for entity in entities:
-                if entity not in self.last_sight:
-                    # no new entity in sight
-                    found = True
-                    break
-            if not found:
-                for person, content in chats.items():
-                    if person not in self.last_chats or content != self.last_chats[person]:
-                        # no new chat language
-                        found = True
-                        break
-            if (self.move_path or (self.action != "Wandering" and not self.action.startswith("Chatting"))) and not found and not finishes and not broadcast:  # not finishes: no finished action/chat  not broadcast: no broadcast
+            # found = False
+            # for entity in entities:
+            #     if entity not in self.last_sight:
+            #         # no new entity in sight
+            #         found = True
+            #         break
+            # if not found:
+            #     for person, content in chats.items():
+            #         if person not in self.last_chats or content != self.last_chats[person]:
+            #             # no new chat language
+            #             found = True
+            #             break
+            if self.able_to_continue(sight):  # not finishes: no finished action/chat  not broadcast: no broadcast
                 # moving or interacting without finished things and broadcast
                 # print(self.move_path)
                 # if len(self.move_path) == 0 and self.next_operation and self.sight.get("operation_dict", dict()).get(self.next_operation):
@@ -122,7 +123,7 @@ class Agent:
         # organize memory-prompt
         background_prompt = self.memory_stream.background.content
         memory_prompt = self._prompt(memory, prompt)
-        self.app.log("memory_prompt: "+memory_prompt)
+        # self.app.log("memory_prompt: "+memory_prompt)
         # save observation
         # TODO: get importance & store_memory -> async
         prompt.importance = self._get_importance(background_prompt, memory_prompt, prompt, prompt.content, "observation")
@@ -130,6 +131,7 @@ class Agent:
         # plan: get & save plan
         # 用plan+observation检索评价plan importance的记忆流
         plan = self._plan(background_prompt, memory_prompt, prompt, time_tick)
+        # plan = self.memory_stream.plan
         self.app.log("plan: "+plan.content)
         self.memory_stream.store_memory(plan)
         # raise ValueError("stop here!")
@@ -139,11 +141,32 @@ class Agent:
         if operations:
             operation = self._act(background_prompt, memory_prompt, prompt, plan.content, sight, time_tick)
             self.operation = operation
+            # operation = self.operation # self._act(background_prompt, memory_prompt, prompt, plan.content, sight, time_tick)
         self.memory_prompt = memory_prompt
         self.last_sight = entities
         self.sight = sight
         self.plan = plan.content
         return {"status": self.status, "operation": operation, "sight": sight, "memory_prompt": memory_prompt, "plan": plan.content, 'prompt': prompt.content}
+    
+    def able_to_continue(self, sight: Dict[str, Any]) -> bool:
+        # entities = sight["entities"]
+        chats = sight["chats"]
+        finishes = sight["finishes"]
+        broadcast = sight["broadcast"]
+        self.app.log("sight: "+str(sight))
+        found = False
+        # for entity in entities:
+        #     if entity not in self.last_sight:
+        #         # no new entity in sight
+        #         found = True
+        #         break
+        if not found:
+            for person, content in chats.items():
+                if person not in self.last_chats or content != self.last_chats[person]:
+                    # no new chat language
+                    found = True
+                    break
+        return (self.move_path or (self.timer.get('action', 0) and self.action != "Wandering" and not self.action.startswith("Chatting"))) and not found and not finishes and not broadcast
     
     def speak(self, target: str, memory_prompt: str, prompt: str, time_tick: int) -> str:
         speak_prompt = self.config.speak_prompt
@@ -175,6 +198,13 @@ class Agent:
         plan = self._plan(memory_prompt, prompt, time_tick)
         self.memory_stream.store_memory(plan)
         return {"action": self.status, "operation": None, "sight": self.sight, "memory_prompt": memory_prompt, "plan": plan, 'prompt': prompt.content}
+
+    def write(self):
+        if self.writing_prompt and not self.writing:
+            writing = self._ask(self.memory_stream.background.content, self.writing_prompt, self.config.reflect_model)
+            self.writing = writing
+            self.writings.append(writing)
+            print(f"{self.get_state('name')} wrote {self.writing}.")
 
     def set_state(self, key: str, value: Any):
         """
@@ -233,6 +263,9 @@ class Agent:
             'action': self.action,
             'status': self.status,
             'plan': self.plan,
+            'writing': self.writing,
+            'writing_prompt': self.writing_prompt,
+            'writings': self.writings,
             'last_emotion': self.last_emotion,
             'emotion': self.emotion,
             'language': self.language,
@@ -276,6 +309,9 @@ class Agent:
         self.speak_to = json_obj['speak_to']
         self.navigate_to = json_obj['navigate_to']
         self.last_big_event = json_obj.get('last_big_event', "")
+        self.writing = json_obj.get("writing", "")
+        self.writing_prompt = json_obj.get("writing_prompt", "")
+        self.writings = json_obj.get("writings", list())
         self.languages = json_obj['languages']
         self.operation = json_obj['operation']
         self.last_sight = set(json_obj['last_sight'])
@@ -307,7 +343,7 @@ class Agent:
         plan_prompt = self.config.plan_prompt
         plan_prompt = self._replace_keyInfo(plan_prompt, memory_prompt, origin_prompt, time_tick)
         plan_prompt = plan_prompt.replace("{plan}", self.plan)
-        content = self._ask(backgroud_prompt, plan_prompt, self.config.reflect_model)
+        content = self._ask(backgroud_prompt, plan_prompt, self.config.plan_model)
         plan_content = re.findall(r'{.*?}', content, re.DOTALL)
         if plan_content:
             plan_content = plan_content[0]
@@ -397,8 +433,9 @@ class Agent:
         importance_prompt = importance_prompt.replace("{memory}", memory_prompt)
         importance_prompt = importance_prompt.replace("{content}", content)
         importance_prompt = importance_prompt.replace("{source}", source)
-        answer = self._ask(background_prompt, importance_prompt, self.config.importance_model)
-        score = self._parse_importance_score(answer)
+        # answer = self._ask(background_prompt, importance_prompt, self.config.importance_model)
+        # score = self._parse_importance_score(answer)
+        score = 3
         self.app.log(f"{str(datetime.datetime.now())} importance end: {str(score)} time used: {str(time.time() - start)}")
         return score
 
@@ -490,7 +527,7 @@ class Agent:
     def distance(self, coord1: tuple, coord2: tuple) -> int:
         return abs(coord2[0]-coord1[0])+abs(coord2[1]-coord1[1])
 
-    def _get_sight(self, time_tick: int) -> Dict[str, Any]:
+    def get_sight(self, time_tick: int) -> Dict[str, Any]:
         start = time.time()
         self.app.log(f"{str(datetime.datetime.now())} get observation start")
         cur_position = self.app.entities.get(self.mud.player, dict()).get("Position")  # self.app.entities.get(self.mud.player, dict()).get("Position") # self.mud.getValue("Position", self.mud.player)
@@ -502,10 +539,13 @@ class Agent:
         broadcast = ""
         if self.app.entities.get(self.mud.singletonID, dict()).get("Broadcast"):
             big_event = self.app.entities.get(self.mud.singletonID, dict()).get("Broadcast")
-            if big_event != self.last_big_event:
-                broadcast = big_event
-                sight.append(f"Big things happen: {big_event}")
-                self.last_big_event = big_event
+            if isinstance(big_event, tuple):
+                big_event = big_event[0]
+            print(big_event)
+            # if big_event != self.last_big_event:
+            broadcast = big_event
+            sight.append(f"Received a message from the broadcast: {big_event}")
+            self.last_big_event = big_event
         operations = dict()
         operation_dict = dict()
         entities = set()
@@ -524,9 +564,9 @@ class Agent:
                     # TODO: get current location and set_state("location")
                     for location, Location in self.app.locations.items():
                         range_value = Location.get_state("range")
-                        if range_value and range_value[0] <= x <= range_value[2] and range_value[1] <= y <= range_value[3]:
+                        if location != self.get_state("location") and range_value and range_value[0] - 2 <= x <= range_value[2] + 2 and range_value[1] - 2 <= y <= range_value[3] + 2:
+                            finishes.add(f"You finished Walking to {location}.")
                             self.set_state("location", location)
-                    continue
                 prompt = ""
                 # if self.app.map[x][y] > 0:
                 #     terrain = self.app.get_terrain_config(self.app.map[x][y])
@@ -538,10 +578,11 @@ class Agent:
                 if self.app.coord2equipment.get(x, dict()).get(y):
                     # equipment
                     equipment = self.app.equipments[self.app.coord2equipment.get(x, dict()).get(y)]
+                    self.app.log(f"find equipment: {equipment['type']}")
                     name = equipment["type"]
                     if name not in entities:
                         # TODO: 20230521 remove equipment triggers
-                        # entities.add(name)
+                        entities.add(name)
                         if equipment.get("config"):
                             # prompt += equipment["config"].description
                             self.app.log("get_sight-equipment: "+equipment["config"].description)
@@ -616,10 +657,11 @@ class Agent:
                 sight.append(prompt)
         if self.finished:
             for item in self.finished:
-                sight.append(f"You finished {item}.")
+                sight.append(f"You just {item}.")
             finishes = self.finished
             self.finished = set()
-        sight = [f"You got {','.join(list(entities))} nearby."] + sight
+        #  there are nobody near you
+        sight = [f"There are {','.join(list(entities)) if entities else 'nobody'} near you.", f"You are in {self.get_state('location')}."] + sight
         # if cur_position[0] > 0:
         #     direct = self.config.move_prompt.replace("{direct}", "left")
         #     operations["left"] = direct
@@ -699,7 +741,7 @@ class Agent:
         # search a passable point around position
         found = False
         position = tuple(position)
-        search_range = 1
+        search_range = 0
         searched = set()
         while not found or search_range < 10:
             for x in range(max(position[0]-search_range, 0), min(position[0]+search_range+1, self.app.width)):
@@ -715,11 +757,13 @@ class Agent:
                     # print(searched)
                 if found:
                     break
+            if found:
+                break
             search_range += 1
         # print("target position:", position)
         # position = position[0]  # eval(position[0].replace("[", "(").replace("]", ")"))
         path = self._navigate(cur_position, position)
-        #self.app.log("navigate path: "+str(path))
+        self.app.log("navigate path: "+str(path))
         if path:
             # remove start
             if path[0] == cur_position:
